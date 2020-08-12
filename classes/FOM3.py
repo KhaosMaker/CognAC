@@ -9,7 +9,7 @@ class FOM3():
 
     def __init__(self, level=0, kind='f'):
         self.transitionMatrix = {}
-        self.idToIndex = {}
+        #self.idToIndex = {}
         self.indexToId = {}
         self.actualId = 0
         self.level = level
@@ -32,7 +32,7 @@ class FOM3():
         Reconstruct the entire Model
         """
         self.transitionMatrix = {}
-        self.idToIndex = {}
+        #self.idToIndex = {}
         self.indexToId = {}
         self.actualId = 0
         
@@ -140,7 +140,7 @@ class FOM3():
         """
         res = {}
         res["transitionMatrix"] = self.transitionMatrix
-        res["idToIndex"] = self.idToIndex
+        #res["idToIndex"] = self.idToIndex
         res["indexToId"] = self.indexToId
         res["actualId"] = self.actualId
         res["level"] = self.level
@@ -156,7 +156,7 @@ class FOM3():
             self.transitionMatrix[idx] = {int(k): int(self.transitionMatrix[idx][k]) for k in self.transitionMatrix[idx]}
             if len(self.transitionMatrix[idx].keys()) == 0:
                 self.transitionMatrix[idx][0] = 1
-        self.idToIndex = res["idToIndex"]
+        #self.idToIndex = res["idToIndex"]
         for element in self.idToIndex:
             self.idToIndex[element] = int(self.idToIndex[element])
         self.indexToId = res["indexToId"]
@@ -199,6 +199,17 @@ class FOM3():
                     del self.transitionMatrix[k][f]
         """
 
+
+    def cleanFOM(self, index):
+        """
+        Delete <index> (class) from the model
+        """
+        #del self.idToIndex[token]
+        #del self.indexToId[index]
+        del self.transitionMatrix[index]
+        for element in self.transitionMatrix:
+            if index in self.transitionMatrix[element]:
+                del self.transitionMatrix[element][index]
 
 
 """

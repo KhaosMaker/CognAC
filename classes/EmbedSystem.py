@@ -305,7 +305,11 @@ class EmbedSystem():
     def getBatchEmbedding(self, data):
         res = self.emb.getBatchEmbedding(data)
         return res
-        
+    
+
+    def clean(self):
+        return self.vd.cleanClass()
+
     """
     def resetEmbedder(self, level, unit1, unit2, special_c, orthogonal, preEmb):
         if preEmb is not None:

@@ -10,6 +10,9 @@ class MemoryLevel:
         self.alphabet = set()
         #self.reverseAlphabet = {}
         self.memoryLength = 0
+
+        # TEST
+        self.chunkMaxLength = 20
         
         # For each element, it contain the index of the element at level-1 that _close_ the chunk
         # a chunk at index i is the union of the elements at level-1 with index from chunks[i-1] to chunks[i]
@@ -54,8 +57,9 @@ class MemoryLevel:
             index = lowerLevel.memoryLength - 2
         self.chunks.append(index)
         
-        s = self.chunks[len(self.chunks)-2]+1
         e = self.chunks[len(self.chunks)-1]+1
+        s = max(self.chunks[len(self.chunks)-2]+1, e - self.chunkMaxLength)
+        
         newChunk = lowerLevel.getChunk(s, e)
 
         #print("MemoryLevel.py -- {}# memory({},{}) => {}".format(self.level, s,e-1, newChunk))

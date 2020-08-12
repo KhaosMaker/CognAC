@@ -224,3 +224,18 @@ class VectorDict():
 
         # Cunk already fitted in the embedder
         self.alreadyFitted = 0
+
+
+    def cleanClass(self):
+        """
+        Delete the low used classes. Return the deleted ones.
+        """
+        res = []
+        for c in self.classCount:
+            if self.classCount[c] == 1:
+                self.classCount[c] = 0
+                for v in self.classList[c]:
+                    del self.vectToClass[v]
+                del self.classList[c]
+                res.append(c)
+        return res

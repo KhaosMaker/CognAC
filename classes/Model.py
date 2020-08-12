@@ -457,6 +457,15 @@ class Model:
         return total / self.levels
 
 
+
+    def clean(self):
+        print("CLEANING...")
+        for i in range(len(self.embedSystem)):
+            print("Cleaning ES")
+            v = self.embedSystem[i].clean()
+            for c in v:
+                print("delete ", c, "from FM")
+                self.forwardModel[i].cleanFOM(c)
     # SAVING MODULE
     #____________________________________________________
 

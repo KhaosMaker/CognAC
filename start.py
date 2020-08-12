@@ -10,7 +10,7 @@ import scipy.io.wavfile as siow
 #import tensorflow as tf
 #from tensorflow.python.compiler.tensorrt import trt_convert as trt
 
-songname = ["song1.wav","song2.wav","song3.wav","song4.wav", "song_porta.wav"]
+songname = ["song1.wav","song2.wav","song3.wav","song4.wav"]#, "song_porta.wav"]
 model_name = "model_PROVA"
 
 memoryLevels = 5
@@ -31,7 +31,7 @@ model = Model(memoryLevels = memoryLevels, dist=dist, unit1=unit1, unit2=unit2, 
 zeroEmbedderPretrained=zeroEmbedderPretrained, generatorClass=FOM3, step=step, orthogonal=orthogonal, lamb=lamb)
 
 # Max elements for each song in input (only for testing)
-maxItem = 0
+maxItem = 4000
 
 for song in songname:
 	# Read the file
@@ -60,6 +60,7 @@ for song in songname:
 	#model.getBatchEmbedding()
 	
 	model.fitDataLevel()
+	model.clean()
 
 model.fitModelLevels()
 print("  -- END FIT --\n\n")
