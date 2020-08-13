@@ -206,7 +206,8 @@ class FOM3():
         """
         #del self.idToIndex[token]
         #del self.indexToId[index]
-        del self.transitionMatrix[index]
+        if index in self.transitionMatrix:
+            del self.transitionMatrix[index]
         for element in self.transitionMatrix:
             if index in self.transitionMatrix[element]:
                 del self.transitionMatrix[element][index]

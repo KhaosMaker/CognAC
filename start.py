@@ -14,9 +14,9 @@ songname = ["song1.wav","song2.wav","song3.wav","song4.wav"]#, "song_porta.wav"]
 model_name = "model_PROVA"
 
 memoryLevels = 5
-dist = [41000, 0.00025]#
+dist = [64000, 0.0025]#
 unit1 = 16
-unit2 = 16
+unit2 = 8
 epochs = 100
 batch = 10
 step = 1
@@ -31,7 +31,7 @@ model = Model(memoryLevels = memoryLevels, dist=dist, unit1=unit1, unit2=unit2, 
 zeroEmbedderPretrained=zeroEmbedderPretrained, generatorClass=FOM3, step=step, orthogonal=orthogonal, lamb=lamb)
 
 # Max elements for each song in input (only for testing)
-maxItem = 4000
+maxItem = 1000
 
 for song in songname:
 	# Read the file
@@ -61,6 +61,7 @@ for song in songname:
 	
 	model.fitDataLevel()
 	model.clean()
+
 
 model.fitModelLevels()
 print("  -- END FIT --\n\n")

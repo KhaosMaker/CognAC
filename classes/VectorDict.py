@@ -231,11 +231,12 @@ class VectorDict():
         Delete the low used classes. Return the deleted ones.
         """
         res = []
-        for c in self.classCount:
+        for c in range(len(self.classCount)):
             if self.classCount[c] == 1:
                 self.classCount[c] = 0
                 for v in self.classList[c]:
                     del self.vectToClass[v]
                 del self.classList[c]
+                del self.classEmb[c]
                 res.append(c)
         return res

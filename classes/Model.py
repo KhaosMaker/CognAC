@@ -107,7 +107,8 @@ class Model:
         # For each level (the zero-th too) prepare to chunk
         for idx in tqdm(range(1, self.memory.getLevel(0).memoryLength, self.step)):
             actualIndex = idx
-            #self.count += 1
+            if idx%5000 == 0:
+                self.clean()
             if self.updateEmbedder():
                 self.embedderTrained = True
                 for l in range(1, self.levels):
