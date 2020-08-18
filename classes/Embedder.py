@@ -2,6 +2,8 @@ from keras.layers import SimpleRNN, Masking, LSTM, Dense, GRU, TimeDistributed, 
 from keras.models import Sequential, Model, load_model
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from keras.preprocessing.sequence import pad_sequences
+from keras import backend as K
+
 
 from random import randint
 from time import time
@@ -36,18 +38,18 @@ class Embedder():
         self.lamb = lamb
         self.orthogonal = orthogonal
         self.reg = SOReguralizer(lamb)
-        inputs = Input(shape=(None, 1), name='input')
+        inputs = Input(shape=(None, 1), batch_shape=(1, None, 1), name='input')
         mask = Masking(mask_value=special_c, name='mask')(inputs)
         if orthogonal:
-            lstm_1, state_c1 = SimpleRNN(kernel_regularizer=self.reg, units=unit1, return_sequences=True, name='lstm_1', return_state=True, recurrent_initializer="orthogonal")(mask)
-            lstm_2, state_c2 = SimpleRNN(kernel_regularizer=self.reg, units=unit2, return_sequences=True, name='lstm_2', return_state=True, recurrent_initializer="orthogonal")(lstm_1)
+            lstm_1, self.state_c1 = SimpleRNN(kernel_regularizer=self.reg, units=unit1, return_sequences=True, name='lstm_1', return_state=True, recurrent_initializer="orthogonal", stateful=True)(mask)
+            lstm_2, self.state_c2 = SimpleRNN(kernel_regularizer=self.reg, units=unit2, return_sequences=True, name='lstm_2', return_state=True, recurrent_initializer="orthogonal", stateful=True)(lstm_1)
         else:
             lstm_1, state_c1 = SimpleRNN(units=unit1, return_sequences=True, name='lstm_1', return_state=True, recurrent_initializer="orthogonal")(mask)
             lstm_2, state_c2 = SimpleRNN(units=unit2, return_sequences=True, name='lstm_2', return_state=True, recurrent_initializer="orthogonal")(lstm_1)
         
         output = TimeDistributed(Dense(1, kernel_initializer='normal',activation='linear', name='output'))(lstm_2)
         self.model = Model(input=inputs, output=output)
-        self.embedder = Model(inputs=self.model.input, outputs=[state_c1, state_c2])
+        self.embedder = Model(inputs=self.model.input, outputs=[self.state_c1, self.state_c2])
         self.model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
         self.emb_size = unit1+unit2
 
@@ -55,6 +57,7 @@ class Embedder():
         #self.mcp_save = ModelCheckpoint('.mdl_wts.hdf5', save_best_only=True, monitor='val_loss', mode='min')
         self.reduce_lr_loss = ReduceLROnPlateau(monitor='accuracy', factor=0.1, patience=7, verbose=1, epsilon=1e-4, mode='min')
 
+        self.partialState = None
 
     def fit(self, data, epochs=10, batch=10, specialValue = 40000):
         """
@@ -77,10 +80,15 @@ class Embedder():
         """        
         # batch size, timestamp, input dim
 
-        x = np.reshape(seq, (1, seq.shape[0], 1))
-        embedding = self.embedder.predict(x)
+        if self.partialState is None:
+            x = np.reshape(seq, (1, seq.shape[0], 1))       
+            embedding = self.embedder.predict(x)
+        else:            
+            x = np.reshape(seq[-1], (1, 1, 1))
+            self.loadPartialState()
+            embedding = self.embedder.predict(x)             
+        self.savePartialState(embedding)      
         res = np.concatenate(embedding, axis=1)[0]
-
         return res
 
     def getBatchEmbedding(self, seq):
@@ -106,4 +114,25 @@ class Embedder():
         self.embedder = load_model(directory+'/embedder'+str(level)+'.h5')
         with open(directory+"/emb_size.b", "rb") as f:
             self.emb_size = pickle.load(f)
+
+
+    def savePartialState(self, states):
+        self.partialState = [states[0], states[1]]
+        #print("state: ", self.model.initial_state)
+        #self.partialState.append(self.model.layers[2].states[0])
+        #self.partialState.append(self.model.layers[2].states[1])
+        #self.partialState.append(self.model.layers[3].states[0])
+        #self.partialState.append(self.model.layers[3].states[1])
+    
+    
+    def loadPartialState(self):
+        self.model.layers[2].reset_states(states=[self.partialState[0]])
+        self.model.layers[3].reset_states(states=[self.partialState[1]])
+
+    
+    def resetPartialState(self):
+        self.model.layers[2].reset_states()
+        self.model.layers[3].reset_states()
+        self.partialState = None
+
 

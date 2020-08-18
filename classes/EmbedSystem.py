@@ -16,10 +16,7 @@ class EmbedSystem():
 
     
     def getNearClass(self, tokenSeq):
-        _t = time()
         embseq = self.emb.get_embedding(tokenSeq)
-        _t = time()-_t
-        #print("\tgetEmbedding): ", _t)
         res = self.vd.getNearClass(embseq)
         return res
     
@@ -310,23 +307,12 @@ class EmbedSystem():
     def clean(self):
         return self.vd.cleanClass()
 
-    """
-    def resetEmbedder(self, level, unit1, unit2, special_c, orthogonal, preEmb):
-        if preEmb is not None:
-            self.emb = preEmb
-            return
-        else:
-            if level is None:
-                level = self.emb.level
-            if unit1 is None:
-                unit1 = self.emb.unit1
-            if unit2 is None:
-                unit2 = self.emb.unit2
-            if special_c is None:
-                special_c = self.emb.special_c
-            if orthogonal is None:
-                orthogonal = self.emb.orthogonal
-
-            self.emb = Embedder(level, unit1, unit2, special_c, orthogonal)
-            return
-    """
+    
+    def savePartialState(self):
+        self.emb.savePartialState()
+    
+    def loadPartialState(self):
+        self.emb.loadPartialState()
+    
+    def resetPartialState(self):
+        self.emb.resetPartialState()

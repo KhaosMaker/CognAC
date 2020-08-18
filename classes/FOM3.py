@@ -95,12 +95,12 @@ class FOM3():
         # (because the item where updated when they are the "prev")
 
         if prev not in self.transitionMatrix:
-            return 0
+            return 1
         
         tot = self.getTotal(prev)
         value = self.getValue(prev, next) 
         
-        return value / max(1,tot)
+        return (value+1) / (tot+1)
 
     
     def getDistribution(self, token):
@@ -121,7 +121,7 @@ class FOM3():
         total = self.getTotal(token)
         for idx in self.transitionMatrix[token].keys():
             pc.append(idx)
-            d.append(int(self.transitionMatrix[token][idx])/total)
+            d.append((int(self.transitionMatrix[token][idx])+1)/(total+1))
 
         return pc, d
 

@@ -22,7 +22,8 @@ class Model:
 
     def __init__(self, data=[], memoryLevels=1, generatorClass=FOM4, updateVectorizationPass=0,
                     dist=[1,1], unit1=1, unit2=1, special_c= -45000, epochs=10, batch=10, maxlen=0, 
-                    zeroEmbedderPretrained=False, step=1, orthogonal=False, doMean=False, lamb=0.01):
+                    zeroEmbedderPretrained=False, step=1, orthogonal=False, doMean=False, lamb=0.01,
+                    cleanClasses=5000):
         
         self.levels = memoryLevels
         self.memory = Memory(self.levels)
@@ -62,6 +63,8 @@ class Model:
         self.orthogonal = orthogonal
         self.lamb = lamb
 
+        self.cleanClasses = cleanClasses
+
    
     def fit(self, reset=0, saveSteps=0, savename='model.json'):
         """
@@ -85,9 +88,11 @@ class Model:
         print("DATA LEVEL: ")
         # For each ground elemente
         #for d in self.data:
-        for d in tqdm(self.data):
+        for idx in tqdm(range(len(self.data))):
+            #if self.memory.memory[0].memoryLength % self.cleanClasses == 0:
+            #    self.clean()
             # START getting input
-            d = np.array(d)
+            d = np.array(self.data[idx])
             c = self.embedSystem[0].computeClass(d, dataLevel=True, inlist=True)
             
             self.memory.addToMemory(0, c)
@@ -107,7 +112,7 @@ class Model:
         # For each level (the zero-th too) prepare to chunk
         for idx in tqdm(range(1, self.memory.getLevel(0).memoryLength, self.step)):
             actualIndex = idx
-            if idx%5000 == 0:
+            if idx%self.cleanClasses == 0:
                 self.clean()
             if self.updateEmbedder():
                 self.embedderTrained = True
@@ -132,6 +137,8 @@ class Model:
                 condition = self.memory.hasToChunk(i, self.forwardModel, self.embedSystem, 
                 actualIndex-1, self.memory.getLevel(i).getItem(actualIndex))
                 if condition:
+                    # Reset state of the embedder
+                    self.embedSystem[i].resetPartialState()
                     # create the new chunk and return it as <element>, not ID
                     newChunk = self.memory.chunk(i+1, actualIndex-1)  
                     chunkClass = self.embedSystem[i+1].computeClass(newChunk)   
@@ -462,10 +469,11 @@ class Model:
     def clean(self):
         print("CLEANING...")
         for i in range(len(self.embedSystem)):
-            print("Cleaning ES")
+            print("Cleaning ES ", i)
             v = self.embedSystem[i].clean()
+            print("From {} to {} (-{})".format(len(self.embedSystem[i].vd.classCount), len(self.embedSystem[i].vd.classCount)-len(v), len(v)))
             for c in v:
-                print("delete ", c, "from FM")
+                #print("delete ", c, "from FM (",i,")")
                 self.forwardModel[i].cleanFOM(c)
     # SAVING MODULE
     #____________________________________________________

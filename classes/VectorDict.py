@@ -8,7 +8,9 @@ from time import time
 class VectorDict():
     def __init__(self, dist, maxlen=0, level=0, doMean=False):
         # Class ID : embedding 
-        self.classEmb = []
+        self.classEmb = {}
+        # Embedding : Class ID
+        self.reverseEmb = {}
         # Class ID : count
         self.classCount = []
         # Class ID : list of chunks of the class
@@ -63,27 +65,40 @@ class VectorDict():
         seq :- Sequenza relativa all'embedding
         return :- the classID of seq if it exist, None otherwise.
         """
-        if len(self.classEmb) == 0:
+        if len(self.classEmb.keys()) == 0:
             return None     
         
-        temp = np.array(self.classEmb)
+        temp = np.array(list(self.classEmb.values()))
         temp2 = norm(emb - temp, axis=-1)
         idx = np.argmin(temp2)
+        
         if temp2[idx] <= self.dist:
-            self.insertSeq(emb, seq, idx, push, dataLevel)
-            return idx
+            c = self.reverseEmb[temp[idx].tobytes()]
+            self.insertSeq(emb, seq, c, push, dataLevel)
+            return c
         else:
             return None
 
     def getNearClass(self, emb):
-        temp = np.array(self.classEmb)
-        return  np.argmin(norm(emb - temp, axis=-1))
+        try:
+            temp = np.array(list(self.classEmb.values()))
+            temp2 = norm(emb - temp, axis=-1)
+        except:
+            print(list(self.classEmb.values()))
+            print(self.classEmb)
+            print(self.level)
+            return -1
+        idx = np.argmin(temp2)
+        c = self.reverseEmb[temp[idx].tobytes()]
+        return c
 
     def addNewClass(self, emb, seq, push=True):
         """
         Create a new classID
         """
-        self.classEmb.append(np.asarray(emb))
+        nc = len(self.classCount)
+        self.classEmb[nc] = np.asarray(emb)
+        self.reverseEmb[np.asarray(emb).tobytes()] = nc
         self.classCount.append(1)
         if push:
             self.chunkList.append(seq)
@@ -105,7 +120,11 @@ class VectorDict():
         """
         # NB SE SI RIMETTE NON FUNZIONA, AGGIUSTARE EMBEDSYSTEM COMPUTECLASS
         if self.doMean:
+            temp = self.classEmb[c].tobytes()
             self.classEmb[c] = (self.classEmb[c]*self.classCount[c]+emb)/(self.classCount[c]+1)
+            self.reverseEmb[self.classEmb[c]] = self.reverseEmb[temp]
+            del self.reverseEmb[tem]
+
         self.classCount[c] += 1
         if push:
             self.chunkList.append(seq)
@@ -135,9 +154,10 @@ class VectorDict():
         """
         result1 = []
         result2 = []
-        if len(self.classList[id]) == 0:
-            print(self.classList.keys())
-            print(" -- ",id)
+        if not id in self.classList or len(self.classList[id]) == 0:
+            #print(self.classList.keys())
+            #print(" -- ",id)
+            return [np.array([0])], [1]
         for element in self.classList[id]:
             result1.append(np.frombuffer(element, dtype=self.uniqueChunkList[0].dtype))
             result2.append(self.classList[id][element])
@@ -209,7 +229,8 @@ class VectorDict():
 
     def reset(self):
         # Class ID : embedding 
-        self.classEmb = []
+        self.classEmb = {}
+        self.reverseEmb = {}
         # Class ID : count
         self.classCount = []
         # Class ID : list of chunks of the class
@@ -234,9 +255,12 @@ class VectorDict():
         for c in range(len(self.classCount)):
             if self.classCount[c] == 1:
                 self.classCount[c] = 0
-                for v in self.classList[c]:
-                    del self.vectToClass[v]
-                del self.classList[c]
-                del self.classEmb[c]
+                #for v in self.classList[c]:
+                #    del self.vectToClass[v]
+                #del self.classList[c]
+                if c in self.classEmb:
+                    emb = self.classEmb[c].tobytes()
+                    del self.classEmb[c]
+                    del self.reverseEmb[emb]
                 res.append(c)
         return res
