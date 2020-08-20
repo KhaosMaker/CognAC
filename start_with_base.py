@@ -15,16 +15,19 @@ import glob, os
 
 #songname = ["song_pkmn_1.wav", "song_pkmn_2.wav", "song_pkmn_3.wav", "song_pkmn_4.wav"]#["song1.wav"]#,"song2.wav","song3.wav","song4.wav"]#, "song_porta.wav"]
 songname = []
+songFolder = "/WAVS"
 direct = os.getcwd()
-os.chdir(os.getcwd()+"/WAVS")
+os.chdir(os.getcwd()+songFolder)
 for file in glob.glob("*.wav"):
-    songname.append(file)
+    songname.append(songFolder+file)
 
 random.shuffle(songname)
+os.chdir(direct)
+
 model_name = "model_PROVA"
 
 memoryLevels = 9
-dist = [1500, 0.0035]#
+dist = [5500, 0.035]#
 unit1 = 16 
 unit2 = 8
 epochs = 200
@@ -36,7 +39,7 @@ lamb = 0.001
 zeroEmbedderPretrained = True
 _updateVectorizationPass = 9800
 cleanClasses=10000
-timeStampSize = 364 # ~1/64s
+timeStampSize = 250 # ~1/64s
 
 model = Model(memoryLevels = memoryLevels, dist=dist, unit1=unit1, unit2=unit2, epochs=epochs, batch=batch, 
 zeroEmbedderPretrained=zeroEmbedderPretrained, generatorClass=FOM3, step=step, orthogonal=orthogonal, lamb=lamb, cleanClasses=cleanClasses)
@@ -44,38 +47,9 @@ zeroEmbedderPretrained=zeroEmbedderPretrained, generatorClass=FOM3, step=step, o
 
 # Max elements for each song in input (only for testing)
 maxItem = 0
-for idx in range(len(songname)):
-	song = songname[idx]
-	# Read the file
-	print("\t|| {} / {} ||".format(idx+1, len(songname)))
-	print("  -- COMPUTING: ", song," --")
-	samplerate, data = siow.read(song)
-	data = data[:,0]
-
-	t = np.zeros((data.shape[0]))
-	v = 100
-	t = data/v
-
-	t = t.astype(np.int32)
-	t = t*v
-	ts = timeStampSize
-	n = int(t.shape[0]/ts)
-	t = t[:n*ts]
-	t = t.reshape(n, ts)
-	if maxItem > 0:
-		t = t[:maxItem]
-	model.updateVectorizationPass = _updateVectorizationPass
-
-	print("  --  STARTING MODEL  --")
-	#model.resetMemory()
-	model.data = t
-	
-	#model.getBatchEmbedding()
-	
-	model.fitDataLevel()
-	model.clean()
-
-
+model = Model()
+model.load('model_PROVA')
+model.addLevels(memoryLevels-1)
 model.fitModelLevels()
 print("  -- END FIT --\n\n")
 model.printModel(max=40)
@@ -84,7 +58,6 @@ print("____________________________")
 #s = "ML: {} | dist: {} | unit1: {} | unit2: {} | TS: {}".format(memoryLevels, dist, unit1, unit2, timeStampSize)
 #model.ebedInfoToFile(s, "model_1")
 
-os.chdir(direct)
 print("Saving...")
 model.save(model_name)
 

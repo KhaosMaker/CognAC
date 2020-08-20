@@ -12,7 +12,7 @@ class MemoryLevel:
         self.memoryLength = 0
 
         # TEST
-        self.chunkMaxLength = 10000
+        self.chunkMaxLength = 30
         
         # For each element, it contain the index of the element at level-1 that _close_ the chunk
         # a chunk at index i is the union of the elements at level-1 with index from chunks[i-1] to chunks[i]
@@ -59,6 +59,7 @@ class MemoryLevel:
         
         e = self.chunks[len(self.chunks)-1]+1
         s = max(self.chunks[len(self.chunks)-2]+1, e - self.chunkMaxLength)
+        #print("CHUNKLEN: {}".format(self.chunks[len(self.chunks)-1]+1-self.chunks[len(self.chunks)-2]+1))
         
         newChunk = lowerLevel.getChunk(s, e)
 

@@ -84,9 +84,6 @@ class VectorDict():
             temp = np.array(list(self.classEmb.values()))
             temp2 = norm(emb - temp, axis=-1)
         except:
-            print(list(self.classEmb.values()))
-            print(self.classEmb)
-            print(self.level)
             return -1
         idx = np.argmin(temp2)
         c = self.reverseEmb[temp[idx].tobytes()]

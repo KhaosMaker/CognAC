@@ -19,3 +19,4 @@ class SOReguralizer(regularizers.Regularizer):
     
     def get_config(self):
         return {'lamb': self.lamb}
+        

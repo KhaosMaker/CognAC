@@ -1,6 +1,6 @@
 from classes.Model import Model
 
-model_name = "model_1"
+model_name = "model_PROVA"
 songname = model_name+"_out.wav"
 
 model = Model()
