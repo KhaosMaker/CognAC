@@ -6,8 +6,8 @@ import numpy as np
 from time import time
 
 class EmbedSystem():
-    def __init__(self, level, dist=10, unit1=1, unit2=1, special_c= -45000, maxlen=0, embedder=None, doMean=False, orthogonal=False, lamb=0.01):
-        self.vd = VectorDict(dist, maxlen, level=level, doMean=doMean)
+    def __init__(self, level, dist=10, unit1=1, unit2=1, special_c= -45000, embedder=None, doMean=False, orthogonal=False, lamb=0.01):
+        self.vd = VectorDict(dist, level=level, doMean=doMean)
         if embedder is not None:
             self.emb = embedder
         else:
@@ -32,8 +32,6 @@ class EmbedSystem():
         """
         # ? vvvvvvvvvvvvv
         if dataLevel:
-            a = time()
-            
             if precomputation:
                 pre = self.vd.preComputeVector(tokenSeq)
                 if pre is not None:
@@ -42,12 +40,8 @@ class EmbedSystem():
                         self.vd.insertSeq(tokenSeq, tokenSeq, pre, push)
                     return pre
             
-            b = time()
             #embseq = tokenSeq#self.emb.get_embedding(tokenSeq)
-            c = time()
             res = self.vd.computeClass(tokenSeq, tokenSeq, push, dataLevel=dataLevel) #self.vd.addNewClass(tokenSeq, tokenSeq, push)
-            d = time()
-            #print("1) {}\n2){}\n3) {}".format(b-a, c-b, d-c))
             return res
         # ? ^^^^^^^^^^^^^^^
 
@@ -60,6 +54,14 @@ class EmbedSystem():
 
         embseq = self.emb.get_embedding(tokenSeq)
         return self.vd.computeClass(embseq, tokenSeq, push)
+
+    def getClass(self, seq):
+        pre = self.vd.preComputeVector(seq)
+        if pre is not None:
+            return pre
+        emb = self.emb.get_embedding(seq)
+        return self.vd.getOnlyClass(emb, seq)
+
 
 
     

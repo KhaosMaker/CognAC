@@ -1,5 +1,5 @@
 from classes.MemoryLevel import MemoryLevel
-from classes.FOM4 import FOM4
+from classes.FOM3 import FOM3
 from classes.EmbedSystem import EmbedSystem
 from classes.Memory import Memory
 from tqdm import tqdm 
@@ -20,10 +20,9 @@ from scipy.sparse import coo_matrix
 
 class Model:
 
-    def __init__(self, data=[], memoryLevels=1, generatorClass=FOM4, updateVectorizationPass=0,
-                    dist=[1,1], unit1=1, unit2=1, special_c= -45000, epochs=10, batch=10, maxlen=0, 
-                    zeroEmbedderPretrained=False, step=1, orthogonal=False, doMean=False, lamb=0.01,
-                    cleanClasses=5000):
+    def __init__(self, data=[], memoryLevels=1, statisticalModel=FOM3, trainEmbedder=0,
+                    dist=[1,1], unit1=1, unit2=1, special_c= -45000, epochs=10, batch=10, maxlen=0,
+                    orthogonal=False, doMean=False, lamb=0.01, cleanClasses=5000):
         
         self.levels = memoryLevels
         self.memory = Memory(self.levels)
@@ -31,28 +30,26 @@ class Model:
         self.upwardModel = []
         self.downwardModel = []
         self.embedSystem = []
-        self.generatorClass = generatorClass
-        self.updateVectorizationPass = updateVectorizationPass
+        self.statisticalModel = statisticalModel
+        self.trainEmbedder = trainEmbedder
         self.epochs = epochs
         self.batch = batch
-        self.zeroEmbedderPretrained = zeroEmbedderPretrained
         self.embedderTrained = False
         # First order models + EmbedSystems       
         for ml in range(memoryLevels):
-            self.forwardModel.append(self.generatorClass(ml, kind='f'))
-            self.upwardModel.append(self.generatorClass(ml,  kind='u'))
-            self.downwardModel.append(self.generatorClass(ml, kind='d'))
+            self.forwardModel.append(self.statisticalModel(ml, kind='f'))
+            self.upwardModel.append(self.statisticalModel(ml,  kind='u'))
+            self.downwardModel.append(self.statisticalModel(ml, kind='d'))
 
-        self.embedSystem.append(EmbedSystem(0, dist[0], unit1, unit2, special_c, maxlen, doMean=doMean, orthogonal=orthogonal, lamb=lamb))
-        self.embedSystem.append(EmbedSystem(1, dist[1], unit1, unit2, special_c, maxlen, doMean=doMean, orthogonal=orthogonal, lamb=lamb))
+        self.embedSystem.append(EmbedSystem(0, dist[0], unit1, unit2, special_c, doMean=doMean, orthogonal=orthogonal, lamb=lamb))
+        self.embedSystem.append(EmbedSystem(1, dist[1], unit1, unit2, special_c, doMean=doMean, orthogonal=orthogonal, lamb=lamb))
         for ml in range(2, memoryLevels):
-            self.embedSystem.append(EmbedSystem(ml, dist[1], maxlen=maxlen, embedder=self.embedSystem[1].emb, doMean=doMean, orthogonal=orthogonal))
+            self.embedSystem.append(EmbedSystem(ml, dist[1], embedder=self.embedSystem[1].emb, doMean=doMean, orthogonal=orthogonal))
 
         self.data = data
-        self.__genC = generatorClass
+        self.__genC = statisticalModel
         self.count = 0
-        self.step = step
-        self.generatorClass = generatorClass
+        self.statisticalModel = statisticalModel
 
         self.unit1 = unit1
         self.unit2 = unit2
@@ -75,7 +72,7 @@ class Model:
         update FOM
         """
         # If we do not need to update the RNN we can free the memory
-        if self.totalChunkNumber() > self.updateVectorizationPass:
+        if self.totalChunkNumber() > self.trainEmbedder:
             self.memory.resetMemory()
         self.fitDataLevel()
         self.fitModelLevels()      
@@ -89,7 +86,7 @@ class Model:
         # For each ground elemente
         #for d in self.data:
         for idx in tqdm(range(len(self.data))):
-            #if self.memory.memory[0].memoryLength % self.cleanClasses == 0:
+            #if self.memory.memory[0].memoryLength % self.cleanClasses*10 == 0:
             #    self.clean()
             # START getting input
             d = np.array(self.data[idx])
@@ -110,7 +107,7 @@ class Model:
         """
         print("UPPER LEVELS: ")
         # For each level (the zero-th too) prepare to chunk
-        for idx in tqdm(range(1, self.memory.getLevel(0).memoryLength, self.step)):
+        for idx in tqdm(range(1, self.memory.getLevel(0).memoryLength)):
             actualIndex = idx
             if idx%self.cleanClasses == 0:
                 self.clean()
@@ -124,9 +121,9 @@ class Model:
                     #self.consolidateMemoryLevel(l)
                     self.embedSystem[l].vd.reset()
                     self.memory.resetMemoryLevel(l)
-                    self.forwardModel[l] = self.generatorClass(l, kind='f')
-                    self.downwardModel[l] = self.generatorClass(l, kind='d')
-                    self.upwardModel[l] = self.generatorClass(l, kind='u')
+                    self.forwardModel[l] = self.statisticalModel(l, kind='f')
+                    self.downwardModel[l] = self.statisticalModel(l, kind='d')
+                    self.upwardModel[l] = self.statisticalModel(l, kind='u')
                 self.fitModelLevels()
                 return
                 print("Memory consolidation end")
@@ -208,46 +205,18 @@ class Model:
         for idx in range(self.levels):
             self.embedSystem[idx].vd.doMean = value
     
-    def resetEmbedders(self, unit1, unit2, dist, special_c= -45000, orthogonal=False, doMean=False, maxlen=0, lamb=0.1):
+    def resetEmbedders(self, unit1, unit2, dist, special_c= -45000, orthogonal=False, doMean=False, lamb=0.1):
         self.embedSystem = [self.embedSystem[0]]
-        self.embedSystem.append(EmbedSystem(1, dist[1], unit1, unit2, special_c, maxlen, doMean=doMean, orthogonal=orthogonal, lamb=lamb))
+        self.embedSystem.append(EmbedSystem(1, dist[1], unit1, unit2, special_c, doMean=doMean, orthogonal=orthogonal, lamb=lamb))
         for ml in range(2, self.levels):
-            self.embedSystem.append(EmbedSystem(ml, dist[1], maxlen=maxlen, embedder=self.embedSystem[1].emb, doMean=doMean, orthogonal=orthogonal))
-
-    def consolidateMemoryLevel(self, level):
-        # Reset classes
-        d = {}  
-        
-        print("\nLEVEL UPDATE\n")
-        self.embedSystem[level].vd.reset()
-        if level == 0:
-            for idx in tqdm(range(self.memory.memory[level].memoryLength)):
-                newClass = self.embedSystem[level].computeClass(self.data[idx])
-                self.memory.getLevel(level).memory[idx] = newClass
-        else:
-            for idx in tqdm(range(self.memory.getLevel(level).memoryLength)):
-                start, end = self.memory.getLevel(level).getChunkLimits(idx)
-                chunk = self.memory.memory[level-1].getChunk(start, end)
-                newClass = self.embedSystem[level].computeClass(chunk)
-                self.memory.getLevel(level).memory[idx] = newClass
-        
-        print("\nFOM UPDATE\n")
-        print("Forward")
-        self.forwardModel[level].reconstruct(self.memory.getLevel(level))
-        if level > 0:
-            print("Downward")
-            self.downwardModel[level].reconstruct(self.memory.getLevel(level), self.memory.getLevel(level-1))
-            print("Below Upward")
-            self.upwardModel[level-1].reconstruct(self.memory.getLevel(level-1), self.memory.getLevel(level))
-
-        print("#==================================#")
+            self.embedSystem.append(EmbedSystem(ml, dist[1], embedder=self.embedSystem[1].emb, doMean=doMean, orthogonal=orthogonal))
         
                 
     def totalChunkNumber(self):
         return sum([self.embedSystem[i].uniqueChunkNumber() for i in range(1, self.levels)])
     
     def updateEmbedder(self):
-        return not self.embedderTrained and self.totalChunkNumber() >= self.updateVectorizationPass
+        return not self.embedderTrained and self.totalChunkNumber() >= self.trainEmbedder
 
 
     def getBatchEmbedding(self):
@@ -279,9 +248,9 @@ class Model:
     
     def addLevel(self):
         self.levels += 1
-        self.forwardModel.append(self.generatorClass(self.levels-1, kind='f'))
-        self.upwardModel.append(self.generatorClass(self.levels-1,  kind='u'))
-        self.downwardModel.append(self.generatorClass(self.levels-1, kind='d'))
+        self.forwardModel.append(self.statisticalModel(self.levels-1, kind='f'))
+        self.upwardModel.append(self.statisticalModel(self.levels-1,  kind='u'))
+        self.downwardModel.append(self.statisticalModel(self.levels-1, kind='d'))
         if self.levels <= 2:
             self.embedSystem.append(EmbedSystem(self.levels-1, self.dist[min(1, max(self.levels-1, 0))], self.unit1, self.unit2, self.special_c, self.maxlen, doMean=self.doMean, orthogonal=self.orthogonal, lamb=self.lamb))
         else:
@@ -469,12 +438,15 @@ class Model:
     def clean(self):
         print("CLEANING...")
         for i in range(len(self.embedSystem)):
-            print("Cleaning ES ", i)
-            v = self.embedSystem[i].clean()
-            print("From {} to {} (-{})".format(len(self.embedSystem[i].vd.classCount), len(self.embedSystem[i].vd.classCount)-len(v), len(v)))
-            for c in v:
-                #print("delete ", c, "from FM (",i,")")
-                self.forwardModel[i].cleanFOM(c)
+            if len(self.embedSystem[i].vd.classEmb) > 1000:
+                print("Cleaning ES ", i)
+                v = self.embedSystem[i].clean()
+                print("From {} to {} (-{})".format(len(self.embedSystem[i].vd.classEmb)+len(v), len(self.embedSystem[i].vd.classEmb), len(v)))
+                for c in v:
+                    #print("delete ", c, "from FM (",i,")")
+                    self.forwardModel[i].cleanFOM(c)
+            else:
+                print("EmbedSystem ", i," of size [", len(self.embedSystem[i].vd.classEmb), "] is too small.")
     # SAVING MODULE
     #____________________________________________________
 
@@ -503,7 +475,6 @@ class Model:
         modelDict["epochs"] = self.epochs
         modelDict["batch"] = self.batch
         modelDict["embedderTrained"] = self.embedderTrained
-        modelDict["step"] = self.step
         with open(modelPath, "wb") as f:
             pickle.dump(modelDict, f)
     
@@ -534,7 +505,6 @@ class Model:
         self.epochs = modelDict["epochs"] 
         self.batch = modelDict["batch"]
         self.embedderTrained = modelDict["embedderTrained"]
-        self.step = modelDict["step"]
 
     
     def loadEmbedSystem(self, directory):

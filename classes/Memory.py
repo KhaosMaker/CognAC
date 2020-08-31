@@ -82,23 +82,50 @@ class Memory():
         # S2
         aItem = token
         forwardProbability = fom[level].getProbability(bItem, aItem)
-        if forwardProbability < zeroProbability:
-            return zeroProbability
+        #if forwardProbability < zeroProbability:
+        #    return zeroProbability
 
         # Downward probability
         # Sum_{all possible C_t}(P(S2 | C_t) * P(C_t | C_{t-1}))
         # METTERE A POSTO! TODO!!!
-        _t = time()
-        downwardProbability = self.computeDownwardProbability(level, fom, previousIndex, token, es)
-        _t = time()-_t
-        #print("DwP: ", _t)
-
-        # downwardProbability = 1
+        downwardProbability = self.computeDownwardProbability_2(level, fom, previousIndex, token, es)
+        
         # Final Probability
         # Forward * Downward
 
-        result = forwardProbability*max(downwardProbability, zeroProbability)
+
+        result = forwardProbability*downwardProbability
         return result
+
+    def computeDownwardProbability_2(self, level, fom, previousIndex, token, embedSystem):
+        # if this is the last level there is no downward prob
+        if level+1 >= self.levels:
+            return 1
+
+        if self.memory[level+1].memoryLength > 0:
+            isFringe = self.memory[level].memoryLength-1 <= previousIndex+1
+            closureIndex, previousChunk = self.memory[level+1].getPreviousChunkClosure(previousIndex+1, isFringe)
+
+            # Compose the buffer
+            buffer = self.memory[level].getChunk(closureIndex+1, previousIndex+1)
+            buffer = np.append(buffer, token)
+
+            # Compute the possible class
+            pcClass = embedSystem[level+1].getClass(buffer)
+
+            # If does not exist, there is no influence from upward
+            if pcClass is None:
+                return 1#fom[level+1].getProbability(self.memory[level+1].getItem(previousChunk), -1)
+
+            # Get the P_f at the right level
+            F = fom[level+1].getProbability(self.memory[level+1].getItem(previousChunk), pcClass)
+            
+            # recursively return
+            return F * self.computeDownwardProbability_2(level+1, fom, previousChunk, pcClass, embedSystem)         
+        else:
+            # if the upper layer memory is empty or have only 1 item
+            return 1
+
 
     def computeDownwardProbability(self, level, fom, previousIndex, token, embedSystem):
         """
@@ -141,9 +168,7 @@ class Memory():
 
             # 4b
             F = fom[level+1].getProbability(self.memory[level+1].getItem(previousChunk), pcClass)
-
             """
-            st = time()
             # TEST v2     vvvvvvvvvvvvvvvv
             # 3c. Get all classes of chunks that start with it
             
@@ -174,16 +199,13 @@ class Memory():
                         if brep[:(-8*ln2)] == tb2:
                             simCounter += 1
 
-            if len(y) == 0:
-                return zeroProbability
 
-            P = len(y) / simCounter
+            P = (len(y) + 1)/ (simCounter + 1)
             # get all possible classes
             
             pcClasses = map(embedSystem[level].vd.preComputeVectorByKey, y)
 
             # END TEST V2 ^^^^^^^^^^^^^^^^
-            et = time()
            
 
             # 4c. Fw Pr of pcClass
@@ -193,14 +215,16 @@ class Memory():
             
             # 5c. P from above
             F = F*P
+            return F
             """
 
             # 5c
             if F > zeroProbability:
+                #return F * aboveP
                 aboveP = self.computeDownwardProbability(level+1, fom, previousChunk, pcClass, embedSystem)
                 return max(F*aboveP, zeroProbability)
             else:
-                return F            
+                return F           
         else:
             # if the upper layer memory is empty or have only 1 item
             return 1
@@ -261,12 +285,14 @@ class Memory():
             return self.memory[level].chunks[index+1]
         else:
             return self.memory[level-1].getLastIndex()
-
+    """
+    Se non usata, cancellare pure
     def normalize(self, distribution):
         total = sum(distribution.values())
         for k in distribution:
             distribution[k] = distribution[k]/max(total,1)
         return distribution
+    """
     
     def getLevel(self, level):
         return self.memory[level]

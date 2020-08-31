@@ -97,12 +97,6 @@ class MemoryLevel:
     def stringToChunk(self, string):
         return string.split(',')
 
-    def idToWord(self, id):
-        """
-        Translate a chunk ID into the word formed by itself.
-        """
-        return None #self.reverseAlphabet[id]#.replace(',', '')
-
     def printLevelStats(self):
         print("Level: ", self.level)
         print("Size: ", self.memoryLength)
@@ -125,15 +119,6 @@ class MemoryLevel:
         result = []
         for i in range(self.memoryLength):
             result.append(self.memory[i])
-        return result
-
-    def translateChunk(self, chunk):
-        result = []
-        for item in chunk:
-            temp = ""
-            for elem in self.reverseAlphabet[item].split(','):
-                temp += elem+","        
-        result.append(temp)
         return result
 
 

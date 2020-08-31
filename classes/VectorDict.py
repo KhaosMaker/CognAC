@@ -6,7 +6,7 @@ from time import time
 
 
 class VectorDict():
-    def __init__(self, dist, maxlen=0, level=0, doMean=False):
+    def __init__(self, dist, level=0, doMean=False):
         # Class ID : embedding 
         self.classEmb = {}
         # Embedding : Class ID
@@ -27,7 +27,6 @@ class VectorDict():
 
         self.actualId = 0
         self.dist = dist
-        self.maxlen = maxlen
         self.doMean = doMean
 
         # Cunk already fitted in the embedder
@@ -78,6 +77,19 @@ class VectorDict():
             return c
         else:
             return None
+    
+    def getOnlyClass(self, emb, seq):
+        if len(self.classEmb.keys()) == 0:
+            return None     
+        
+        temp = np.array(list(self.classEmb.values()))
+        temp2 = norm(emb - temp, axis=-1)
+        idx = np.argmin(temp2)
+        if temp2[idx] <= self.dist:
+            c = self.reverseEmb[temp[idx].tobytes()]
+        else:
+            return None
+
 
     def getNearClass(self, emb):
         try:
@@ -125,8 +137,6 @@ class VectorDict():
         self.classCount[c] += 1
         if push:
             self.chunkList.append(seq)
-        if self.maxlen > 0 and len(self.classList[c]) > self.maxlen:
-            self.classList[c].pop(0)
         key = seq.tobytes()#np.array_str(seq)
 
         if key not in self._UCL:
@@ -201,7 +211,6 @@ class VectorDict():
         res["actualId"] = self.actualId
         res["level"] = self.level
         res["dist"] = self.dist
-        res["maxlen"] = self.maxlen
         return res
     
     def load(self, save):
@@ -210,8 +219,7 @@ class VectorDict():
         self.actualId = save['actualId']
         self.level = save['level']
         self.dist = save['dist']
-        self.maxlen = save['maxlen']
-
+        
         
         # Class ID : count
         for c in self.classList:

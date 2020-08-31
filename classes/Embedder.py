@@ -41,13 +41,13 @@ class Embedder():
         inputs = Input(shape=(None, 1), batch_shape=(1, None, 1), name='input')
         mask = Masking(mask_value=special_c, name='mask')(inputs)
         if orthogonal:
-            lstm_1, state_c1 = SimpleRNN(kernel_regularizer=self.reg, units=unit1, return_sequences=True, name='lstm_1', return_state=True, recurrent_initializer="orthogonal", stateful=True)(mask)
-            lstm_2, state_c2 = SimpleRNN(kernel_regularizer=self.reg, units=unit2, return_sequences=True, name='lstm_2', return_state=True, recurrent_initializer="orthogonal", stateful=True)(lstm_1)
+            rnn_layer_1, state_c1 = GRU(kernel_regularizer=self.reg, units=unit1, return_sequences=True, name='rnn_layer_1', return_state=True, recurrent_initializer="orthogonal", stateful=True)(inputs)
+            rnn_layer_2, state_c2 = GRU(kernel_regularizer=self.reg, units=unit2, return_sequences=True, name='rnn_layer_2', return_state=True, recurrent_initializer="orthogonal", stateful=True)(rnn_layer_1)
         else:
-            lstm_1, state_c1 = SimpleRNN(units=unit1, return_sequences=True, name='lstm_1', return_state=True, recurrent_initializer="orthogonal")(mask)
-            lstm_2, state_c2 = SimpleRNN(units=unit2, return_sequences=True, name='lstm_2', return_state=True, recurrent_initializer="orthogonal")(lstm_1)
+            rnn_layer_1, state_c1 = SimpleRNN(units=unit1, return_sequences=True, name='rnn_layer_1', return_state=True, recurrent_initializer="orthogonal")(mask)
+            rnn_layer_2, state_c2 = SimpleRNN(units=unit2, return_sequences=True, name='rnn_layer_2', return_state=True, recurrent_initializer="orthogonal")(rnn_layer_1)
         
-        output = TimeDistributed(Dense(1, kernel_initializer='normal',activation='linear', name='output'))(lstm_2)
+        output = TimeDistributed(Dense(1, kernel_initializer='normal',activation='linear', name='output'))(rnn_layer_2)
         self.model = Model(input=inputs, output=output)
         self.embedder = Model(inputs=self.model.input, outputs=[state_c1, state_c2])
         self.model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
@@ -120,13 +120,13 @@ class Embedder():
         self.partialState = [states[0], states[1]]
     
     def loadPartialState(self):
-        self.model.layers[2].reset_states(states=[self.partialState[0]])
-        self.model.layers[3].reset_states(states=[self.partialState[1]])
+        self.model.layers[1].reset_states(states=[self.partialState[0]])
+        self.model.layers[2].reset_states(states=[self.partialState[1]])
 
     
     def resetPartialState(self):
+        self.model.layers[1].reset_states()
         self.model.layers[2].reset_states()
-        self.model.layers[3].reset_states()
         self.partialState = None
 
 

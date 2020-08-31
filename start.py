@@ -13,18 +13,17 @@ import random
 
 import glob, os
 
-#songname = ["song_pkmn_1.wav", "song_pkmn_2.wav", "song_pkmn_3.wav", "song_pkmn_4.wav"]#["song1.wav"]#,"song2.wav","song3.wav","song4.wav"]#, "song_porta.wav"]
 songname = []
 direct = os.getcwd()
 os.chdir(os.getcwd()+"/WAVS")
 for file in glob.glob("*.wav"):
     songname.append(file)
-
+#songname = ["song_pkmn_1.wav"]
 random.shuffle(songname)
 model_name = "model_PROVA"
 
 memoryLevels = 9
-dist = [1500, 0.0035]#
+dist = [22000, 0.0002]#
 unit1 = 16 
 unit2 = 8
 epochs = 200
@@ -35,45 +34,47 @@ orthogonal = True
 lamb = 0.001
 zeroEmbedderPretrained = True
 _updateVectorizationPass = 9800
-cleanClasses=10000
-timeStampSize = 364 # ~1/64s
+cleanClasses= 10000
+timeStampSize = 250 # ~1/64s
 
 model = Model(memoryLevels = memoryLevels, dist=dist, unit1=unit1, unit2=unit2, epochs=epochs, batch=batch, 
-zeroEmbedderPretrained=zeroEmbedderPretrained, generatorClass=FOM3, step=step, orthogonal=orthogonal, lamb=lamb, cleanClasses=cleanClasses)
+statisticalModel=FOM3, orthogonal=orthogonal, lamb=lamb, cleanClasses=cleanClasses)
 
 
 # Max elements for each song in input (only for testing)
 maxItem = 0
-for idx in range(len(songname)):
-	song = songname[idx]
-	# Read the file
-	print("\t|| {} / {} ||".format(idx+1, len(songname)))
-	print("  -- COMPUTING: ", song," --")
-	samplerate, data = siow.read(song)
-	data = data[:,0]
+for i in range(3):
+	random.shuffle(songname)
+	for idx in range(len(songname)):
+		song = songname[idx]
+		# Read the file
+		print("\t|| {} / {} ||".format(idx+1, len(songname)))
+		print("  -- COMPUTING: ", song," --")
+		samplerate, data = siow.read(song)
+		data = data[:,0]
 
-	t = np.zeros((data.shape[0]))
-	v = 100
-	t = data/v
+		t = np.zeros((data.shape[0]))
+		v = 100
+		t = data/v
 
-	t = t.astype(np.int32)
-	t = t*v
-	ts = timeStampSize
-	n = int(t.shape[0]/ts)
-	t = t[:n*ts]
-	t = t.reshape(n, ts)
-	if maxItem > 0:
-		t = t[:maxItem]
-	model.updateVectorizationPass = _updateVectorizationPass
+		t = t.astype(np.int32)
+		t = t*v
+		ts = timeStampSize
+		n = int(t.shape[0]/ts)
+		t = t[:n*ts]
+		t = t.reshape(n, ts)
+		if maxItem > 0:
+			t = t[random.randint(0,5):maxItem]
+		model.updateVectorizationPass = _updateVectorizationPass
 
-	print("  --  STARTING MODEL  --")
-	#model.resetMemory()
-	model.data = t
-	
-	#model.getBatchEmbedding()
-	
-	model.fitDataLevel()
-	model.clean()
+		print("  --  STARTING MODEL  --")
+		#model.resetMemory()
+		model.data = t
+		
+		#model.getBatchEmbedding()
+		
+		model.fitDataLevel()
+		model.clean()
 
 
 model.fitModelLevels()
@@ -89,7 +90,7 @@ print("Saving...")
 model.save(model_name)
 
 print("Generating!")	
-model.generateSong(model_name+"_out.wav", 200, 0, samplerate)
+model.generateSong(model_name+"_out.wav", 300, 0, samplerate)
 
 print("SAVING embed data")
 #model.embedInfoToFile("[40000, 0.00035] | 16-16 | ts: 345 | 4.8 train | no mean vect | no Orth", filename=model_name+"_info.txt")

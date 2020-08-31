@@ -10,7 +10,7 @@ class FOM3():
     def __init__(self, level=0, kind='f'):
         self.transitionMatrix = {}
         #self.idToIndex = {}
-        self.indexToId = {}
+        #self.indexToId = {}
         self.actualId = 0
         self.level = level
 
@@ -25,43 +25,6 @@ class FOM3():
         if next not in self.transitionMatrix[prev]:
             self.transitionMatrix[prev][next] = 0
         self.transitionMatrix[prev][next] += 1
-
-
-    def reconstruct(self, fromML, toML=None):
-        """
-        Reconstruct the entire Model
-        """
-        self.transitionMatrix = {}
-        #self.idToIndex = {}
-        self.indexToId = {}
-        self.actualId = 0
-        
-        if toML is None:
-            # is a forward model
-            for idx in range(fromML.memoryLength):
-                self.update(fromML.getItem(max(idx-1,0)), fromML.getItem(idx))
-            return
-        if fromML.memoryLength * toML.memoryLength == 0:
-            return
-        # is a model between layers (so have 2 different alphabet)
-        if fromML.memoryLength > toML.memoryLength:
-            # we are in a upward model
-            chunksLimits = toML.chunks   
-            self.update(fromML.getItem(0), toML.getItem(0))
-            for idx in range(1, len(chunksLimits)-1):
-                fromToken = fromML.getItem(chunksLimits[idx]+1)
-                toToken = toML.getItem(idx)
-                self.update(fromToken, toToken)
-        else:
-            #downward model
-            chunksLimits = fromML.chunks 
-            for idx in range(1, len(chunksLimits)-1):
-                fromToken = fromML.getItem(idx)
-                toToken = toML.getItem(chunksLimits[idx+1])
-                self.update(fromToken, toToken)
-
-        
-
 
 
     def getValue(self, prev, next):
@@ -97,10 +60,12 @@ class FOM3():
         if prev not in self.transitionMatrix:
             return 1
         
-        tot = self.getTotal(prev)
         value = self.getValue(prev, next) 
-        
-        return (value+1) / (tot+1)
+        tot = self.getTotal(prev) + 1
+        if value == 0:
+            return 1 / tot
+        else:
+            return value / tot
 
     
     def getDistribution(self, token):
@@ -118,10 +83,14 @@ class FOM3():
             return pc, d
         
         
-        total = self.getTotal(token)
+        total = self.getTotal(token) + 1
         for idx in self.transitionMatrix[token].keys():
             pc.append(idx)
-            d.append((int(self.transitionMatrix[token][idx])+1)/(total+1))
+            count = self.getValue(token, idx)
+            if count > 0:
+                d.append(count/total)
+            else:
+                d.append(1/total)
 
         return pc, d
 
@@ -141,7 +110,7 @@ class FOM3():
         res = {}
         res["transitionMatrix"] = self.transitionMatrix
         #res["idToIndex"] = self.idToIndex
-        res["indexToId"] = self.indexToId
+        #res["indexToId"] = self.indexToId
         res["actualId"] = self.actualId
         res["level"] = self.level
         return res
@@ -157,8 +126,8 @@ class FOM3():
             if len(self.transitionMatrix[idx].keys()) == 0:
                 self.transitionMatrix[idx][0] = 1
         #self.idToIndex = res["idToIndex"]
-        for element in self.idToIndex:
-            self.idToIndex[element] = int(self.idToIndex[element])
+        #for element in self.idToIndex:
+        #    self.idToIndex[element] = int(self.idToIndex[element])
         self.indexToId = res["indexToId"]
         self.indexToId = {int(k): self.indexToId[k] for k in self.indexToId}
         self.actualId = res["actualId"]
