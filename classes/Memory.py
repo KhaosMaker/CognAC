@@ -22,7 +22,7 @@ class Memory():
     def resetMemoryLevel(self, level):
         self.memory[level] = MemoryLevel(level)
 
-    def hasToChunk(self, level, fom, es, previousIndex = None, token = None):
+    def hasToChunk(self, level, fom, es, previousIndex = None, token = None, influence=False):
         """
         Return true if it can be created a new chunk at <level>
         """
@@ -35,7 +35,7 @@ class Memory():
         if token is None:
             token = self.memory[level].getItem(l-1)
 
-        h = self.computeInformationContent(level, fom, previousIndex, token, es)
+        h = self.computeInformationContent(level, fom, previousIndex, token, es, influence)
         self.memory[level].addh(h)
         return self.memory[level].hasToChunk()
 
@@ -51,20 +51,48 @@ class Memory():
         """
         return self.memory[level].chunkToString(chunk)
 
-    def computeInformationContent(self, level, fom, previousIndex, token, es):
+    def computeInformationContent(self, level, fom, previousIndex, token, es, influence=False):
         """
         compute Information Content
         -log(p)
         fom = 1st order model
         """
         
-        p = self.computeProbability(level, fom, previousIndex, token, es)
-        #print("P: {}".format(p))
+        p = self.computeProbability(level, fom, previousIndex, token, es, influence)
+        #print("P: {}".format(p)),
         h = -math.log(p, 2)
         return h
 
+    def computeTokenProbability(self, level, fom, prev, next, es):
+        result = 0
+        forwardProbability = fom[level].getProbability(prev[-1], next)
+        downwardProbability = self.computeTokenDProbability(level, fom, prev, next, es)
+        result = forwardProbability*downwardProbability
+        return result
 
-    def computeProbability(self, level, fom, previousIndex, token, es):
+    def computeTokenDProbability(self, level, fom, prev, token, embedSystem):
+        if self.memory[level+1].memoryLength > 0:
+            buffer = np.array(prev)
+            buffer = np.append(buffer, token)
+
+            # Compute the possible class
+            pcClass = embedSystem[level+1].getClass(buffer)
+
+            # If does not exist, there is no influence from upward
+            if pcClass is None:
+                pcClass = embedSystem[level+1].getNewClassId(id)
+
+            # Get the P_f at the right level
+            F = fom[level+1].getProbability(self.memory[level+1].getItem(previousChunk), pcClass)
+            
+            # recursively return
+            return F * self.computeDownwardProbability_2(level+1, fom, previousChunk, pcClass, embedSystem)         
+        else:
+            # if the upper layer memory is empty or have only 1 item
+            return 1
+
+
+    def computeProbability(self, level, fom, previousIndex, token, es, influence=False):
         """
         Compute the probability P of a given element.
         level :- level of the memory
@@ -88,7 +116,7 @@ class Memory():
         # Downward probability
         # Sum_{all possible C_t}(P(S2 | C_t) * P(C_t | C_{t-1}))
         # METTERE A POSTO! TODO!!!
-        downwardProbability = self.computeDownwardProbability_2(level, fom, previousIndex, token, es)
+        downwardProbability = self.computeDownwardProbability_2(level, fom, previousIndex, token, es, influence)
         
         # Final Probability
         # Forward * Downward
@@ -97,7 +125,11 @@ class Memory():
         result = forwardProbability*downwardProbability
         return result
 
-    def computeDownwardProbability_2(self, level, fom, previousIndex, token, embedSystem):
+    def computeDownwardProbability_2(self, level, fom, previousIndex, token, embedSystem, influence=False):
+        """
+        influence :- if true, the upper layer always influence the lowers. Otherwise, if a class is not found, 
+        the probability would return 1.
+        """
         # if this is the last level there is no downward prob
         if level+1 >= self.levels:
             return 1
@@ -113,9 +145,9 @@ class Memory():
             # Compute the possible class
             pcClass = embedSystem[level+1].getClass(buffer)
 
-            # If does not exist, there is no influence from upward
+            # If does not exist, give the new class as ghost
             if pcClass is None:
-                return 1#fom[level+1].getProbability(self.memory[level+1].getItem(previousChunk), -1)
+                pcClass = embedSystem[level+1].getNewClassId()
 
             # Get the P_f at the right level
             F = fom[level+1].getProbability(self.memory[level+1].getItem(previousChunk), pcClass)

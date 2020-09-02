@@ -44,8 +44,8 @@ class Embedder():
             rnn_layer_1, state_c1 = GRU(kernel_regularizer=self.reg, units=unit1, return_sequences=True, name='rnn_layer_1', return_state=True, recurrent_initializer="orthogonal", stateful=True)(inputs)
             rnn_layer_2, state_c2 = GRU(kernel_regularizer=self.reg, units=unit2, return_sequences=True, name='rnn_layer_2', return_state=True, recurrent_initializer="orthogonal", stateful=True)(rnn_layer_1)
         else:
-            rnn_layer_1, state_c1 = SimpleRNN(units=unit1, return_sequences=True, name='rnn_layer_1', return_state=True, recurrent_initializer="orthogonal")(mask)
-            rnn_layer_2, state_c2 = SimpleRNN(units=unit2, return_sequences=True, name='rnn_layer_2', return_state=True, recurrent_initializer="orthogonal")(rnn_layer_1)
+            rnn_layer_1, state_c1 = SimpleRNN(units=unit1, return_sequences=True, name='rnn_layer_1', return_state=True, recurrent_initializer="orthogonal", stateful=True)(mask)
+            rnn_layer_2, state_c2 = SimpleRNN(units=unit2, return_sequences=True, name='rnn_layer_2', return_state=True, recurrent_initializer="orthogonal", stateful=True)(rnn_layer_1)
         
         output = TimeDistributed(Dense(1, kernel_initializer='normal',activation='linear', name='output'))(rnn_layer_2)
         self.model = Model(input=inputs, output=output)
@@ -59,20 +59,37 @@ class Embedder():
 
         self.partialState = None
 
-    def fit(self, data, epochs=10, batch=10, specialValue = 40000):
+    def fit(self, data, epochs=10, batch=1, specialValue = 40000):
         """
         data :- list of np array
         """
+        tempModel = self.makeTempModel()
         special_value = specialValue
-        #DELETE
-        #print("DATA: {} ({})".format(data, type(data)))
         padded_seq = pad_sequences(data, padding='post', value=special_value)
         # batch size, timestamp, input dim
         X = np.reshape(padded_seq, (padded_seq.shape[0],padded_seq.shape[1], 1))
         Y = np.roll(X, 1, axis=1)
 
-        self.model.fit(x=X, y=Y, epochs=epochs, batch_size=batch, callbacks=[self.earlyStopping, self.reduce_lr_loss], verbose = 0)
+        tempModel.fit(x=X, y=Y, epochs=epochs, batch_size=batch, callbacks=[self.earlyStopping, self.reduce_lr_loss], verbose = 1)
+        self.model.set_weights(tempModel.get_weights())
     
+    def makeTempModel(self):
+        inputs = Input(shape=(None, 1), batch_shape=(1, None, 1), name='input')
+        mask = Masking(mask_value=self.special_c, name='mask')(inputs)
+        if self.orthogonal:
+            rnn_layer_1, state_c1 = GRU(kernel_regularizer=self.reg, units=self.unit1, return_sequences=True, name='rnn_layer_1', return_state=True, recurrent_initializer="orthogonal")(inputs)
+            rnn_layer_2, state_c2 = GRU(kernel_regularizer=self.reg, units=self.unit2, return_sequences=True, name='rnn_layer_2', return_state=True, recurrent_initializer="orthogonal")(rnn_layer_1)
+        else:
+            rnn_layer_1, state_c1 = GRU(units=self.unit1, return_sequences=True, name='rnn_layer_1', return_state=True, recurrent_initializer="orthogonal")(mask)
+            rnn_layer_2, state_c2 = GRU(units=self.unit2, return_sequences=True, name='rnn_layer_2', return_state=True, recurrent_initializer="orthogonal")(rnn_layer_1)
+        
+        output = TimeDistributed(Dense(1, kernel_initializer='normal',activation='linear', name='output'))(rnn_layer_2)
+        model = Model(input=inputs, output=output)
+        model.set_weights(self.model.get_weights())
+        model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
+        return model
+
+
     def get_embedding(self, seq):
         """
         seq = nparray with the chunk

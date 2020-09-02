@@ -94,6 +94,13 @@ class FOM3():
 
         return pc, d
 
+    def getNext(self, prev):
+        token = prev
+        if token not in self.transitionMatrix:
+            return []
+
+        return [k for k in self.transitionMatrix[token]]
+
     
     """
     def getTransitionMatrixRow(self, token):

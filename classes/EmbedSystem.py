@@ -61,6 +61,9 @@ class EmbedSystem():
             return pre
         emb = self.emb.get_embedding(seq)
         return self.vd.getOnlyClass(emb, seq)
+    
+    def getNewClassId(self):
+        return self.vd.actualId
 
 
 
@@ -72,13 +75,13 @@ class EmbedSystem():
         """
         return self.vd.getElementByClass(c)
 
-    def fit(self, data, epochs=10, batch=10):
+    def fit(self, data, epochs=10, batch=1):
         if data is None or len(data) < 1:
             return
-        batch = int(len(data)/10)+1
+        #batch = int(len(data)/10)+1
         self.emb.fit(data, epochs, batch)
 
-    def autofit(self, epoch=10, batch=10, new=False):
+    def autofit(self, epoch=10, batch=1, new=False):
         if new:
             self.fit(self.getNewChunks(), epoch, batch)
         else:

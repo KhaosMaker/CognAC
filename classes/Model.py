@@ -16,12 +16,13 @@ from math import floor
 import random
 import csv
 from scipy.sparse import coo_matrix
+import copy
 
 
 class Model:
 
     def __init__(self, data=[], memoryLevels=1, statisticalModel=FOM3, trainEmbedder=0,
-                    dist=[1,1], unit1=1, unit2=1, special_c= -45000, epochs=10, batch=10, maxlen=0,
+                    dist=[1,1], unit1=1, unit2=1, special_c= -45000, epochs=10, batch=1, maxlen=0,
                     orthogonal=False, doMean=False, lamb=0.01, cleanClasses=5000):
         
         self.levels = memoryLevels
@@ -216,6 +217,7 @@ class Model:
         return sum([self.embedSystem[i].uniqueChunkNumber() for i in range(1, self.levels)])
     
     def updateEmbedder(self):
+        #print("---> {} >= {}".format(self.totalChunkNumber(), self.trainEmbedder))
         return not self.embedderTrained and self.totalChunkNumber() >= self.trainEmbedder
 
 
@@ -274,6 +276,22 @@ class Model:
         generation = generation.astype(np.int16)
         print("GENERATION: ")
         siow.write(filename, samplerate, generation)  
+    
+    def generateSong_firstOrder(self, filename, start, n, samplerate):
+        generation = self.generate_firstOrder(start=start, n=n)
+        generation = list(map(int, generation))
+        generation = np.array(generation)
+        generation = generation.astype(np.int16)
+        print("GENERATION: ")
+        siow.write(filename, samplerate, generation)  
+
+    def generate_freewheel(self, filename, start, n, samplerate):
+        generation = self.freeWheel(start=start, n=n)
+        generation = list(map(int, generation))
+        generation = np.array(generation)
+        generation = generation.astype(np.int16)
+        print("GENERATION: ")
+        siow.write(filename, samplerate, generation)
 
     def startGenerate(self):
         """
@@ -453,10 +471,10 @@ class Model:
     def save(self, directory="model"):
         try:
             os.mkdir(directory)
-        except OSError:
-            print ("Creation of the directory %s failed" % directory)
         except FileExistsError:
             print ("Directory {} already exist".format(directory))
+        except OSError:
+            print ("Creation of the directory %s failed" % directory)
         else:
             print ("Successfully created the directory %s" % directory)
         
@@ -486,6 +504,30 @@ class Model:
         
         with open(directory+"/vector_dictionary.pk", "wb") as f:
             pickle.dump(vdDict, f)
+
+    def saveFirstLayer(self, directory):
+        try:
+            os.mkdir(directory)
+        except FileExistsError:
+            print ("Directory {} already exist".format(directory))
+        except OSError:
+            print ("Creation of the directory %s failed" % directory)
+        else:
+            print ("Successfully created the directory %s" % directory)
+        modelPath = directory+"/layer0.pk"
+        modelDict = {}
+        modelDict["layer0"] = self.memory.memory[0]
+        modelDict["forwardModel"] = self.forwardModel[0]
+        modelDict["VectorDict"] = self.embedSystem[0].vd.getSave()
+        with open(modelPath, "wb") as f:
+            pickle.dump(modelDict, f)
+
+    def loadFirstLayer(self, directory):
+        with open(directory+"/layer0.pk", "rb") as f: 
+            modelDict = pickle.load(f)
+        self.memory.memory[0] = modelDict["layer0"]
+        self.forwardModel[0] = modelDict["forwardModel"]
+        self.embedSystem[0].vd.load(modelDict["VectorDict"])
 
 
     def load(self, directory):
@@ -535,3 +577,76 @@ class Model:
                 self.embedSystem.append(es)
 
     #____________________________________________________
+
+    def generate_firstOrder(self, start = 0, n = 50):
+        result = []
+        result = result + self.translateClass(start, 0)
+        token = start
+        for i in tqdm(range(n)):
+            possibleTokens = self.forwardModel[0].getNext(token)
+            prob = []
+            for p in possibleTokens:
+                prob.append(self.forwardModel[0].getProbability(token, p))
+            if len(prob) == 0:
+                choice = start
+            else:
+                choice = random.choices(possibleTokens, weights=prob)[0]
+            element = self.translateClass(choice, 0)
+            token = choice
+            result = result + element
+        return result
+
+    def freeWheel(self, start=0, n=100):
+        memory = Memory(self.levels)
+        memory.addToMemory(0, start)
+        token = start        
+        for idx in tqdm(range(n)):
+            possibleTokens = self.forwardModel[0].getNext(token)
+            if len(possibleTokens) == 0:
+                possibleTokens =[start]
+            prob = []
+            for data in possibleTokens:
+                #print("> {}".format(data))
+                memory.addToMemory(0, data)
+                cleanlevels = 1
+                actualIndex = idx
+                for i in range(self.levels-1):
+                    # IF the memory has to be chunked after the new insterion
+                    condition = memory.hasToChunk(i, self.forwardModel, self.embedSystem, 
+                    actualIndex-1, data, influence=True)
+                    if condition:
+
+                        # Reset state of the embedder
+                        self.embedSystem[i].resetPartialState()
+                        # create the new chunk and return it as <element>, not ID
+                        newChunk = memory.chunk(i+1, actualIndex-1)  
+                        #print("{} |{} | {}".format(i, actualIndex, newChunk))
+                        #print("{}".format(memory.getLevel(i).memoryLength))
+                        #print("{}".format(memory.getLevel(i).memory))
+                        #input()
+                        chunkClass = self.embedSystem[i+1].computeClass(newChunk, push=False)   
+                        memory.addToMemory(i+1, chunkClass)
+                        
+                        actualIndex = memory.getLevel(i+1).memoryLength-1
+                        cleanlevels = i+1
+
+                    else:
+                        break
+                prob.append(memory.computeProbability(0, self.forwardModel, idx-1, data, self.embedSystem))
+                for l in range(cleanlevels):
+                    memory.getLevel(l).deleteLast()
+            #print("FROM: ", token, ":")
+            #ads = [(possibleTokens[i], prob[i]) for i in range(len(possibleTokens))]
+            #for e in ads:
+            #    print(e)
+            token = random.choices(possibleTokens, weights=prob)[0]
+            memory.addToMemory(0, token)
+            #print("TOKEN -> ", token)
+        result = []
+        for token in memory.getLevel(0).memory:
+            result = result + self.translateClass(token, 0)
+        return result
+
+
+
+

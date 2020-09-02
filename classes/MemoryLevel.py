@@ -205,6 +205,12 @@ class MemoryLevel:
         NB Return the token, not the ID.
         """
         return self.memory[self.memoryLength-1]
+    
+    def deleteLast(self):
+        self.memory = self.memory[:-1]
+        self.memoryLength -= 1
+        self.h = self.h[:-1]
+        self.chunks = self.chunks[:-1]
 
     """
     def possibleChunks(self, tokenList, previousChunk, fom, es):

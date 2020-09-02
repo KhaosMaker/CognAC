@@ -13,13 +13,6 @@ import random
 
 import glob, os
 
-songname = []
-direct = os.getcwd()
-os.chdir(os.getcwd()+"/WAVS")
-for file in glob.glob("*.wav"):
-    songname.append(file)
-#songname = ["song_pkmn_1.wav"]
-random.shuffle(songname)
 model_name = "model_PROVA"
 
 memoryLevels = 5
@@ -27,7 +20,7 @@ dist = [28000, 0.0025]#
 unit1 = 16
 unit2 = 8
 epochs = 200
-batch = 1
+batch = 2
 step = 1
 doMean = True
 orthogonal = True
@@ -39,49 +32,7 @@ timeStampSize = 300 # ~1/64s
 
 model = Model(memoryLevels = memoryLevels, dist=dist, unit1=unit1, unit2=unit2, epochs=epochs, batch=batch, 
 statisticalModel=FOM3, orthogonal=orthogonal, lamb=lamb, cleanClasses=cleanClasses, trainEmbedder=trainEmbedder)
-
-
-# Max elements for each song in input (only for testing)
-maxItem = 0
-for i in range(1):
-	random.shuffle(songname)
-	for idx in range(len(songname)):
-		song = songname[idx]
-		# Read the file
-		print("\t|| {} / {} ||".format(idx+1, len(songname)))
-		print("  -- COMPUTING: ", song," --")
-		samplerate, data = siow.read(song)
-		data = data[:,0]
-		data = data[::2] #half the number of samples
-		samplerate = floor(samplerate/2) # half the samplerate
-
-		t = np.zeros((data.shape[0]))
-		v = 100
-		t = data/v
-
-		t = t.astype(np.int32)
-		t = t*v
-		ts = timeStampSize
-		n = int(t.shape[0]/ts)
-		t = t[:n*ts]
-		t = t.reshape(n, ts)
-		if maxItem > 0:
-			t = t[:maxItem]
-
-		print("  --  STARTING MODEL  --")
-		#model.resetMemory()
-		model.data = t[random.randint(0,40):]
-		
-		#model.getBatchEmbedding()
-		
-		model.fitDataLevel()
-		model.clean()
-
-os.chdir(direct)
-model.saveFirstLayer("firstLayer_backup")
-input()
-
-
+model.loadFirstLayer("firstLayer_backup")
 model.fitModelLevels()
 print("  -- END FIT --\n\n")
 model.printModel(max=40)
@@ -90,7 +41,7 @@ print("____________________________")
 #s = "ML: {} | dist: {} | unit1: {} | unit2: {} | TS: {}".format(memoryLevels, dist, unit1, unit2, timeStampSize)
 #model.ebedInfoToFile(s, "model_1")
 
-
+os.chdir(direct)
 print("Saving...")
 model.save(model_name)
 
