@@ -41,7 +41,7 @@ class Embedder():
         inputs = Input(shape=(None, 1), batch_shape=(1, None, 1), name='input')
         mask = Masking(mask_value=special_c, name='mask')(inputs)
         if orthogonal:
-            rnn_layer_1, state_c1 = GRU(kernel_regularizer=self.reg, units=unit1, return_sequences=True, name='rnn_layer_1', return_state=True, recurrent_initializer="orthogonal", stateful=True)(inputs)
+            rnn_layer_1, state_c1 = GRU(kernel_regularizer=self.reg, units=unit1, return_sequences=True, name='rnn_layer_1', return_state=True, recurrent_initializer="orthogonal", stateful=True)(mask)
             rnn_layer_2, state_c2 = GRU(kernel_regularizer=self.reg, units=unit2, return_sequences=True, name='rnn_layer_2', return_state=True, recurrent_initializer="orthogonal", stateful=True)(rnn_layer_1)
         else:
             rnn_layer_1, state_c1 = SimpleRNN(units=unit1, return_sequences=True, name='rnn_layer_1', return_state=True, recurrent_initializer="orthogonal", stateful=True)(mask)
@@ -63,21 +63,22 @@ class Embedder():
         """
         data :- list of np array
         """
-        tempModel = self.makeTempModel()
+        tempModel = self.makeTempModel(batch)
         special_value = specialValue
         padded_seq = pad_sequences(data, padding='post', value=special_value)
         # batch size, timestamp, input dim
-        X = np.reshape(padded_seq, (padded_seq.shape[0],padded_seq.shape[1], 1))
+
+        X = np.reshape(padded_seq, (padded_seq.shape[0], padded_seq.shape[1], 1))
         Y = np.roll(X, 1, axis=1)
 
         tempModel.fit(x=X, y=Y, epochs=epochs, batch_size=batch, callbacks=[self.earlyStopping, self.reduce_lr_loss], verbose = 1)
         self.model.set_weights(tempModel.get_weights())
     
-    def makeTempModel(self):
-        inputs = Input(shape=(None, 1), batch_shape=(1, None, 1), name='input')
+    def makeTempModel(self, batch):
+        inputs = Input(shape=(None, 1), batch_shape=(None, None, 1), name='input')
         mask = Masking(mask_value=self.special_c, name='mask')(inputs)
         if self.orthogonal:
-            rnn_layer_1, state_c1 = GRU(kernel_regularizer=self.reg, units=self.unit1, return_sequences=True, name='rnn_layer_1', return_state=True, recurrent_initializer="orthogonal")(inputs)
+            rnn_layer_1, state_c1 = GRU(kernel_regularizer=self.reg, units=self.unit1, return_sequences=True, name='rnn_layer_1', return_state=True, recurrent_initializer="orthogonal")(mask)
             rnn_layer_2, state_c2 = GRU(kernel_regularizer=self.reg, units=self.unit2, return_sequences=True, name='rnn_layer_2', return_state=True, recurrent_initializer="orthogonal")(rnn_layer_1)
         else:
             rnn_layer_1, state_c1 = GRU(units=self.unit1, return_sequences=True, name='rnn_layer_1', return_state=True, recurrent_initializer="orthogonal")(mask)
@@ -137,13 +138,13 @@ class Embedder():
         self.partialState = [states[0], states[1]]
     
     def loadPartialState(self):
-        self.model.layers[1].reset_states(states=[self.partialState[0]])
-        self.model.layers[2].reset_states(states=[self.partialState[1]])
+        self.model.layers[2].reset_states(states=[self.partialState[0]])
+        self.model.layers[3].reset_states(states=[self.partialState[1]])
 
     
     def resetPartialState(self):
-        self.model.layers[1].reset_states()
         self.model.layers[2].reset_states()
+        self.model.layers[3].reset_states()
         self.partialState = None
 
 

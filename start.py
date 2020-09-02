@@ -33,7 +33,7 @@ doMean = True
 orthogonal = True
 lamb = 0.001
 zeroEmbedderPretrained = True
-trainEmbedder = 50
+trainEmbedder = 5000
 cleanClasses= 10000
 timeStampSize = 300 # ~1/64s
 

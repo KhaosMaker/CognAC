@@ -20,13 +20,13 @@ dist = [28000, 0.0025]#
 unit1 = 16
 unit2 = 8
 epochs = 200
-batch = 2
+batch = 10
 step = 1
 doMean = True
 orthogonal = True
 lamb = 0.001
 zeroEmbedderPretrained = True
-trainEmbedder = 50
+trainEmbedder = 5000
 cleanClasses= 10000
 timeStampSize = 300 # ~1/64s
 
