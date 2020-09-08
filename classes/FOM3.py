@@ -3,7 +3,7 @@ from classes.CONSTANTS import zeroProbability
 import numpy as np
 
 #temp:
-from random import randint
+from random import randint, random, choice
 
 class FOM3():
 
@@ -100,6 +100,9 @@ class FOM3():
             return []
 
         return [k for k in self.transitionMatrix[token]]
+
+    def getRandomToken(self):
+        return choice(list(self.transitionMatrix.keys()))
 
     
     """

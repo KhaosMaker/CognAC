@@ -23,19 +23,19 @@ random.shuffle(songname)
 model_name = "model_PROVA"
 
 memoryLevels = 5
-dist = [28000, 0.0025]#
+dist = [25000, 0.0095]#
 unit1 = 16
 unit2 = 8
 epochs = 200
-batch = 1
+batch = 10
 step = 1
 doMean = True
 orthogonal = True
 lamb = 0.001
 zeroEmbedderPretrained = True
-trainEmbedder = 5000
+trainEmbedder = 10000
 cleanClasses= 10000
-timeStampSize = 300 # ~1/64s
+timeStampSize = 250 # ~1/64s
 
 model = Model(memoryLevels = memoryLevels, dist=dist, unit1=unit1, unit2=unit2, epochs=epochs, batch=batch, 
 statisticalModel=FOM3, orthogonal=orthogonal, lamb=lamb, cleanClasses=cleanClasses, trainEmbedder=trainEmbedder)
@@ -78,8 +78,8 @@ for i in range(1):
 		model.clean()
 
 os.chdir(direct)
-model.saveFirstLayer("firstLayer_backup")
-input()
+#model.saveFirstLayer("firstLayer_backup")
+#input()
 
 
 model.fitModelLevels()

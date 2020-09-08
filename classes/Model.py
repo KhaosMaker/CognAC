@@ -462,7 +462,8 @@ class Model:
                 print("From {} to {} (-{})".format(len(self.embedSystem[i].vd.classEmb)+len(v), len(self.embedSystem[i].vd.classEmb), len(v)))
                 for c in v:
                     #print("delete ", c, "from FM (",i,")")
-                    self.forwardModel[i].cleanFOM(c)
+                    #self.forwardModel[i].cleanFOM(c)
+                    continue
             else:
                 print("EmbedSystem ", i," of size [", len(self.embedSystem[i].vd.classEmb), "] is too small.")
     # SAVING MODULE
@@ -602,8 +603,10 @@ class Model:
         token = start        
         for idx in tqdm(range(n)):
             possibleTokens = self.forwardModel[0].getNext(token)
+            print("[{}] -> [{}]".format(token, possibleTokens))
             if len(possibleTokens) == 0:
-                possibleTokens =[start]
+                possibleTokens = self.forwardModel[0].getRandomToken()
+                input()
             prob = []
             for data in possibleTokens:
                 #print("> {}".format(data))
@@ -640,6 +643,7 @@ class Model:
             #for e in ads:
             #    print(e)
             token = random.choices(possibleTokens, weights=prob)[0]
+            #print(token, end=" -> ")
             memory.addToMemory(0, token)
             #print("TOKEN -> ", token)
         result = []
