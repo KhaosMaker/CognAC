@@ -72,6 +72,7 @@ class VectorDict():
         idx = np.argmin(temp2)
         
         if temp2[idx] <= self.dist:
+            #print(self.level, ") fromGetClass: ", len(self.reverseEmb))
             c = self.reverseEmb[temp[idx].tobytes()]
             self.insertSeq(emb, seq, c, push, dataLevel)
             return c
@@ -86,7 +87,13 @@ class VectorDict():
         temp2 = norm(emb - temp, axis=-1)
         idx = np.argmin(temp2)
         if temp2[idx] <= self.dist:
-            c = self.reverseEmb[temp[idx].tobytes()]
+            try:
+                c = self.reverseEmb[temp[idx].tobytes()]
+                return c
+            except:
+                for k in self.classEmb:
+                    if temp[idx].tobytes() == self.classEmb[k].tobytes():
+                        print("ERROR: key is ", k, "with: ", self.actualId)
         else:
             return None
 
@@ -132,7 +139,7 @@ class VectorDict():
             temp = self.classEmb[c].tobytes()
             self.classEmb[c] = (self.classEmb[c]*self.classCount[c]+emb)/(self.classCount[c]+1)
             self.reverseEmb[self.classEmb[c]] = self.reverseEmb[temp]
-            del self.reverseEmb[tem]
+            del self.reverseEmb[temp]
 
         self.classCount[c] += 1
         if push:
@@ -264,8 +271,8 @@ class VectorDict():
                 #    del self.vectToClass[v]
                 #del self.classList[c]
                 if c in self.classEmb:
-                    emb = self.classEmb[c].tobytes()
                     del self.classEmb[c]
-                    del self.reverseEmb[emb]
+                    #emb = self.classEmb[c].tobytes()
+                    #del self.reverseEmb[emb]
                 res.append(c)
         return res

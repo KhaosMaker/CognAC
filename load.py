@@ -1,4 +1,5 @@
 from classes.Model import Model
+from math import floor
 
 model_name = "model_PROVA"
 songname = model_name+"_out.wav"
@@ -8,7 +9,7 @@ model.load(model_name)
 
 
 print("GENERATING: ", songname)
-model.generateSong(songname, 450, 3, 22050)
+model.generateFreewheel(songname, 1, 1000, floor(22050/2))
 
 print()
 print("SAVING embed data")

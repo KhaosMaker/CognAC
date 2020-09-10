@@ -22,7 +22,7 @@ import copy
 class Model:
 
     def __init__(self, data=[], memoryLevels=1, statisticalModel=FOM3, trainEmbedder=0,
-                    dist=[1,1], unit1=1, unit2=1, special_c= -45000, epochs=10, batch=1, maxlen=0,
+                    dist=[1,1], unit1=1, unit2=1, special_c= -45000, epochs=10, batch=1,
                     orthogonal=False, doMean=False, lamb=0.01, cleanClasses=5000):
         
         self.levels = memoryLevels
@@ -56,7 +56,6 @@ class Model:
         self.unit2 = unit2
         self.special_c = special_c
         self.dist = dist
-        self.maxlen = maxlen
         self.doMean = doMean
         self.orthogonal = orthogonal
         self.lamb = lamb
@@ -79,18 +78,18 @@ class Model:
         self.fitModelLevels()      
 
 
-    def fitDataLevel(self):
+    def fitDataLevel(self, data):
         """
         fit the level 0
         """
         print("DATA LEVEL: ")
         # For each ground elemente
         #for d in self.data:
-        for idx in tqdm(range(len(self.data))):
-            #if self.memory.memory[0].memoryLength % self.cleanClasses*10 == 0:
-            #    self.clean()
+        for idx in tqdm(range(len(data))):
+            if self.memory.memory[0].memoryLength % self.cleanClasses == 0:
+                self.clean()
             # START getting input
-            d = np.array(self.data[idx])
+            d = np.array(data[idx])
             c = self.embedSystem[0].computeClass(d, dataLevel=True, inlist=True)
             
             self.memory.addToMemory(0, c)
@@ -139,6 +138,7 @@ class Model:
                     self.embedSystem[i].resetPartialState()
                     # create the new chunk and return it as <element>, not ID
                     newChunk = self.memory.chunk(i+1, actualIndex-1)  
+                    print("{}] NEW CHUNK of len [{}]".format(i, len(newChunk)))
                     chunkClass = self.embedSystem[i+1].computeClass(newChunk)   
                     self.memory.addToMemory(i+1, chunkClass)
 
@@ -220,7 +220,7 @@ class Model:
         #print("---> {} >= {}".format(self.totalChunkNumber(), self.trainEmbedder))
         return not self.embedderTrained and self.totalChunkNumber() >= self.trainEmbedder
 
-
+    """
     def getBatchEmbedding(self):
         self.embedSystem[0].fit(self.data, epochs=self.epochs, batch=self.batch)
         embeddingList = self.embedSystem[0].getBatchEmbedding(self.data)
@@ -247,6 +247,7 @@ class Model:
                 self.memory.actualItem(0)
                 )
         #self.fitModelLevels()
+    """
     
     def addLevel(self):
         self.levels += 1
@@ -254,9 +255,9 @@ class Model:
         self.upwardModel.append(self.statisticalModel(self.levels-1,  kind='u'))
         self.downwardModel.append(self.statisticalModel(self.levels-1, kind='d'))
         if self.levels <= 2:
-            self.embedSystem.append(EmbedSystem(self.levels-1, self.dist[min(1, max(self.levels-1, 0))], self.unit1, self.unit2, self.special_c, self.maxlen, doMean=self.doMean, orthogonal=self.orthogonal, lamb=self.lamb))
+            self.embedSystem.append(EmbedSystem(self.levels-1, self.dist[min(1, max(self.levels-1, 0))], self.unit1, self.unit2, self.special_c, doMean=self.doMean, orthogonal=self.orthogonal, lamb=self.lamb))
         else:
-            self.embedSystem.append(EmbedSystem(self.levels-1, self.dist[1], maxlen=self.maxlen, embedder=self.embedSystem[0].emb, doMean=self.doMean, orthogonal=self.orthogonal))
+            self.embedSystem.append(EmbedSystem(self.levels-1, self.dist[1], embedder=self.embedSystem[0].emb, doMean=self.doMean, orthogonal=self.orthogonal))
         self.memory.addMemoryLevel()
     
     def addLevels(self, n):
@@ -285,7 +286,7 @@ class Model:
         print("GENERATION: ")
         siow.write(filename, samplerate, generation)  
 
-    def generate_freewheel(self, filename, start, n, samplerate):
+    def generateFreewheel(self, filename, start, n, samplerate):
         generation = self.freeWheel(start=start, n=n)
         generation = list(map(int, generation))
         generation = np.array(generation)
@@ -459,7 +460,7 @@ class Model:
             if len(self.embedSystem[i].vd.classEmb) > 1000:
                 print("Cleaning ES ", i)
                 v = self.embedSystem[i].clean()
-                print("From {} to {} (-{})".format(len(self.embedSystem[i].vd.classEmb)+len(v), len(self.embedSystem[i].vd.classEmb), len(v)))
+                print("EmbedSystem {}: [{}] -> [{}] (-{})".format(i, len(self.embedSystem[i].vd.classEmb)+len(v), len(self.embedSystem[i].vd.classEmb), len(v)))
                 for c in v:
                     #print("delete ", c, "from FM (",i,")")
                     #self.forwardModel[i].cleanFOM(c)
@@ -494,6 +495,16 @@ class Model:
         modelDict["epochs"] = self.epochs
         modelDict["batch"] = self.batch
         modelDict["embedderTrained"] = self.embedderTrained
+
+        modelDict["dist"] = self.dist
+        modelDict["unit1"] = self.unit1
+        modelDict["unit2"] = self.unit2
+        modelDict["special_c"] = self.special_c
+        modelDict["orthogonal"] = self.orthogonal
+        modelDict["doMean"] = self.doMean
+        modelDict["lamb"] = self.lamb
+        modelDict["cleanClases"] = self.cleanClasses
+
         with open(modelPath, "wb") as f:
             pickle.dump(modelDict, f)
     
@@ -548,6 +559,14 @@ class Model:
         self.epochs = modelDict["epochs"] 
         self.batch = modelDict["batch"]
         self.embedderTrained = modelDict["embedderTrained"]
+        self.dist = modelDict["dist"]
+        self.unit1 = modelDict["unit1"]
+        self.unit2 = modelDict["unit2"]
+        self.special_c = modelDict["special_c"]
+        self.orthogonal = modelDict["orthogonal"]
+        self.doMean = modelDict["doMean"]
+        self.lamb = modelDict["lamb"]
+        self.cleanClasses = modelDict["cleanClases"]
 
     
     def loadEmbedSystem(self, directory):
@@ -557,7 +576,7 @@ class Model:
         self.embedSystem = []
         print("  --  Loading Embed System LV 0  --")
         # LV 0
-        es = EmbedSystem(0)
+        es = EmbedSystem(0, self.dist[0], self.unit1, self.unit2, self.special_c, doMean=self.doMean, orthogonal=self.orthogonal, lamb=self.lamb)
         es.emb.load(directory, 0)
         es.vd.load(vdDict[0])
         self.embedSystem.append(es)
@@ -565,7 +584,7 @@ class Model:
         if self.levels > 1:
             # LV 1
             print("  --  Loading Embed System LV 1  -- ")
-            es = EmbedSystem(1)
+            es = EmbedSystem(1, self.dist[1], self.unit1, self.unit2, self.special_c, doMean=self.doMean, orthogonal=self.orthogonal, lamb=self.lamb)
             es.emb.load(directory, 1)
             es.vd.load(vdDict[1])
             self.embedSystem.append(es)
@@ -603,54 +622,55 @@ class Model:
         token = start        
         for idx in tqdm(range(n)):
             possibleTokens = self.forwardModel[0].getNext(token)
-            print("[{}] -> [{}]".format(token, possibleTokens))
             if len(possibleTokens) == 0:
-                possibleTokens = self.forwardModel[0].getRandomToken()
-                input()
+                possibleTokens.append(self.forwardModel[0].getRandomToken())
+            
             prob = []
             for data in possibleTokens:
-                #print("> {}".format(data))
-                memory.addToMemory(0, data)
-                cleanlevels = 1
-                actualIndex = idx
-                for i in range(self.levels-1):
-                    # IF the memory has to be chunked after the new insterion
-                    condition = memory.hasToChunk(i, self.forwardModel, self.embedSystem, 
-                    actualIndex-1, data, influence=True)
-                    if condition:
-
-                        # Reset state of the embedder
-                        self.embedSystem[i].resetPartialState()
-                        # create the new chunk and return it as <element>, not ID
-                        newChunk = memory.chunk(i+1, actualIndex-1)  
-                        #print("{} |{} | {}".format(i, actualIndex, newChunk))
-                        #print("{}".format(memory.getLevel(i).memoryLength))
-                        #print("{}".format(memory.getLevel(i).memory))
-                        #input()
-                        chunkClass = self.embedSystem[i+1].computeClass(newChunk, push=False)   
-                        memory.addToMemory(i+1, chunkClass)
-                        
-                        actualIndex = memory.getLevel(i+1).memoryLength-1
-                        cleanlevels = i+1
-
-                    else:
-                        break
+                cleanlevels = self.addToHierarchicalMemory(memory, data, idx, permanent=False)                
                 prob.append(memory.computeProbability(0, self.forwardModel, idx-1, data, self.embedSystem))
                 for l in range(cleanlevels):
                     memory.getLevel(l).deleteLast()
-            #print("FROM: ", token, ":")
-            #ads = [(possibleTokens[i], prob[i]) for i in range(len(possibleTokens))]
-            #for e in ads:
-            #    print(e)
+
             token = random.choices(possibleTokens, weights=prob)[0]
-            #print(token, end=" -> ")
-            memory.addToMemory(0, token)
-            #print("TOKEN -> ", token)
+            self.addToHierarchicalMemory(memory, token, idx) 
+
         result = []
         for token in memory.getLevel(0).memory:
             result = result + self.translateClass(token, 0)
         return result
 
+    def addToHierarchicalMemory(self, memory, data, actualIndex, permanent=True):
+        """
+        permanent :- if true, the new class is added to the vectordict
+        """
+        memory.addToMemory(0, data)
+        cleanlevels = 1
+        for i in range(self.levels-1):
+            # IF the memory has to be chunked after the new insterion
+            condition = memory.hasToChunk(i, self.forwardModel, self.embedSystem, 
+            actualIndex-1, data, influence=True)
+            if condition:
+                if permanent:
+                    print("CHUNK at ", actualIndex, "[level ", i, "]")
+                # Reset state of the embedder
+                self.embedSystem[i].resetPartialState()
+                # create the new chunk and return it as <element>, not ID
+                newChunk = memory.chunk(i+1, actualIndex-1)  
+                if permanent:
+                    chunkClass = self.embedSystem[i+1].computeClass(newChunk, push=False)
+                else:
+                    chunkClass = self.embedSystem[i+1].getClass(newChunk)
+                    if chunkClass is None:
+                        chunkClass = self.embedSystem[i+1].getNewClassId()
+                
+                memory.addToMemory(i+1, chunkClass)
+                
+                actualIndex = memory.getLevel(i+1).memoryLength-1
+                cleanlevels = i+1
 
+            else:
+                break
+        return cleanlevels
 
 

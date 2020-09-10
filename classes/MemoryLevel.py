@@ -12,7 +12,7 @@ class MemoryLevel:
         self.memoryLength = 0
 
         # TEST
-        self.chunkMaxLength = 30
+        self.chunkMaxLength = 0
         
         # For each element, it contain the index of the element at level-1 that _close_ the chunk
         # a chunk at index i is the union of the elements at level-1 with index from chunks[i-1] to chunks[i]

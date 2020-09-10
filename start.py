@@ -22,10 +22,10 @@ for file in glob.glob("*.wav"):
 random.shuffle(songname)
 model_name = "model_PROVA"
 
-memoryLevels = 5
-dist = [25000, 0.0095]#
+memoryLevels = 6
+dist = [28000, 0.00015]#
 unit1 = 16
-unit2 = 8
+unit2 = 16
 epochs = 200
 batch = 10
 step = 1
@@ -33,9 +33,9 @@ doMean = True
 orthogonal = True
 lamb = 0.001
 zeroEmbedderPretrained = True
-trainEmbedder = 10000
+trainEmbedder = 8000
 cleanClasses= 10000
-timeStampSize = 250 # ~1/64s
+timeStampSize = 350 # ~1/64s
 
 model = Model(memoryLevels = memoryLevels, dist=dist, unit1=unit1, unit2=unit2, epochs=epochs, batch=batch, 
 statisticalModel=FOM3, orthogonal=orthogonal, lamb=lamb, cleanClasses=cleanClasses, trainEmbedder=trainEmbedder)
@@ -69,16 +69,12 @@ for i in range(1):
 			t = t[:maxItem]
 
 		print("  --  STARTING MODEL  --")
-		#model.resetMemory()
-		model.data = t[random.randint(0,40):]
 		
-		#model.getBatchEmbedding()
-		
-		model.fitDataLevel()
-		model.clean()
+		model.fitDataLevel(t[random.randint(0,40):])
+		#model.clean()
 
 os.chdir(direct)
-#model.saveFirstLayer("firstLayer_backup")
+model.saveFirstLayer("firstLayer_backup")
 #input()
 
 
@@ -95,9 +91,9 @@ print("Saving...")
 model.save(model_name)
 
 print("Generating!")	
-model.generateSong(model_name+"_out_normal.wav", 300, 0, samplerate)
-model.generateSong_firstOrder(model_name+"_out_firstOrder.wav", start=0, n=800, samplerate=samplerate)
-model.generate_freewheel(model_name+"_freewheel.wav", start=1, n=1900, samplerate=samplerate)
+#model.generateSong(model_name+"_out_normal.wav", 300, 0, samplerate)
+#model.generateSong_firstOrder(model_name+"_out_firstOrder.wav", start=0, n=800, samplerate=samplerate)
+model.generateFreewheel(model_name+"_freewheel.wav", start=1, n=1900, samplerate=samplerate)
 
 print("SAVING embed data")
 #model.embedInfoToFile("[40000, 0.00035] | 16-16 | ts: 345 | 4.8 train | no mean vect | no Orth", filename=model_name+"_info.txt")

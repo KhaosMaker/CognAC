@@ -118,20 +118,25 @@ class Embedder():
 
     # SAVE MODEL
     def save(self, directory=""):
+        """
         self.model.save(directory+'/emb_model_lv_'+str(self.level)+'.h5')
         self.embedder.save(directory+'/embedder'+str(self.level)+'.h5')
         with open(directory+"/emb_size.b", "wb") as f:
             pickle.dump(self.emb_size, f)
+        """
+        self.model.save_weights(directory+'/emb_model_lv_'+str(self.level)+'.h5')
+
 
     
     def load(self, directory="", level=None):
         if level is None:
             raise "Error: level parameter cannot be None!"
         self.level = level
-        self.model = load_model(directory+'/emb_model_lv_'+str(level)+'.h5', custom_objects={'reg':SOReguralizer})
-        self.embedder = load_model(directory+'/embedder'+str(level)+'.h5')
-        with open(directory+"/emb_size.b", "rb") as f:
-            self.emb_size = pickle.load(f)
+        self.model.load_weights(directory+'/emb_model_lv_'+str(self.level)+'.h5')
+        #self.model = load_model(directory+'/emb_model_lv_'+str(level)+'.h5', custom_objects={'reg':SOReguralizer})
+        #self.embedder = load_model(directory+'/embedder'+str(level)+'.h5')
+        #with open(directory+"/emb_size.b", "rb") as f:
+        #    self.emb_size = pickle.load(f)
 
 
     def savePartialState(self, states):

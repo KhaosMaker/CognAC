@@ -16,9 +16,9 @@ import glob, os
 model_name = "model_PROVA"
 
 memoryLevels = 6
-dist = [28000, 0.00035]#
+dist = [28000, 0.0035]#
 unit1 = 16
-unit2 = 8
+unit2 = 16
 epochs = 200
 batch = 10
 step = 1
@@ -26,9 +26,9 @@ doMean = True
 orthogonal = True
 lamb = 0.001
 zeroEmbedderPretrained = True
-trainEmbedder = 5000
-cleanClasses= 8000
-timeStampSize = 300 # ~1/64s
+trainEmbedder = 6000
+cleanClasses= 9000
+timeStampSize = 250 # ~1/64s
 
 model = Model(memoryLevels = memoryLevels, dist=dist, unit1=unit1, unit2=unit2, epochs=epochs, batch=batch, 
 statisticalModel=FOM3, orthogonal=orthogonal, lamb=lamb, cleanClasses=cleanClasses, trainEmbedder=trainEmbedder)
@@ -47,7 +47,7 @@ model.save(model_name)
 print("Generating!")	
 model.generateSong(model_name+"_out_normal.wav", 300, 0, int(22050/2))
 model.generateSong_firstOrder(model_name+"_out_firstOrder.wav", start=0, n=800, samplerate=int(22050/2))
-model.generate_freewheel(model_name+"_freewheel.wav", start=1, n=1900, samplerate=int(22050/2))
+model.generateFreewheel(model_name+"_freewheel.wav", start=1, n=1900, samplerate=int(22050/2))
 
 print("SAVING embed data")
 #model.embedInfoToFile("[40000, 0.00035] | 16-16 | ts: 345 | 4.8 train | no mean vect | no Orth", filename=model_name+"_info.txt")
