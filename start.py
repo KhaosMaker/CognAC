@@ -20,12 +20,12 @@ for file in glob.glob("*.wav"):
     songname.append(file)
 #songname = ["song_pkmn_1.wav"]
 random.shuffle(songname)
-model_name = "model_PROVA"
+model_name = "model2020"
 
 memoryLevels = 6
-dist = [28000, 0.00015]#
+dist = [26000, 0.00015]#
 unit1 = 16
-unit2 = 16
+unit2 = 8
 epochs = 200
 batch = 10
 step = 1
@@ -33,9 +33,9 @@ doMean = True
 orthogonal = True
 lamb = 0.001
 zeroEmbedderPretrained = True
-trainEmbedder = 8000
+trainEmbedder = 1000
 cleanClasses= 10000
-timeStampSize = 350 # ~1/64s
+timeStampSize = 150 # ~1/64s
 
 model = Model(memoryLevels = memoryLevels, dist=dist, unit1=unit1, unit2=unit2, epochs=epochs, batch=batch, 
 statisticalModel=FOM3, orthogonal=orthogonal, lamb=lamb, cleanClasses=cleanClasses, trainEmbedder=trainEmbedder)

@@ -9,6 +9,7 @@ class FOM3():
 
     def __init__(self, level=0, kind='f'):
         self.transitionMatrix = {}
+        self.zeroOrder = {}
         #self.idToIndex = {}
         #self.indexToId = {}
         self.actualId = 0
@@ -24,7 +25,10 @@ class FOM3():
             self.transitionMatrix[prev] = {}
         if next not in self.transitionMatrix[prev]:
             self.transitionMatrix[prev][next] = 0
+            self.zeroOrder[next] = 0
         self.transitionMatrix[prev][next] += 1
+        self.zeroOrder[next] += 1
+
 
 
     def getValue(self, prev, next):
@@ -63,7 +67,9 @@ class FOM3():
         value = self.getValue(prev, next) 
         tot = self.getTotal(prev) + 1
         if value == 0:
-            return 1 / tot
+            if next not in self.zeroOrder:
+                return 1/tot * 1 / sum(self.zeroOrder.values())
+            return 1 / tot * self.zeroOrder[next] / sum(self.zeroOrder.values())
         else:
             return value / tot
 

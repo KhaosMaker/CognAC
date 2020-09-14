@@ -8,15 +8,15 @@ class SOReguralizer(regularizers.Regularizer):
 
     def __call__(self, x):
         return self.cust_reg(x)
-
     
     def fro_norm(self, w):
-        return self.lamb*K.sqrt(K.sum(K.square(K.abs(w))))
+        return K.sqrt(K.sum(K.square(K.abs(w))))
 
     def cust_reg(self, w):
-        m = K.dot(K.transpose(w), w) - np.eye(w.shape[1])
-        return self.fro_norm(m)
+        a = K.dot(K.transpose(w), w) - np.eye(w.shape[1])
+        b = K.dot(w, K.transpose(w)) - np.eye(w.shape[0])
+        res = self.lamb*(self.fro_norm(a) + self.fro_norm(b))
+        return res
     
     def get_config(self):
-        return {'lamb': self.lamb}
-        
+        return {'lamb': self.lamb}     

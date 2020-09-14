@@ -138,7 +138,7 @@ class Model:
                     self.embedSystem[i].resetPartialState()
                     # create the new chunk and return it as <element>, not ID
                     newChunk = self.memory.chunk(i+1, actualIndex-1)  
-                    print("{}] NEW CHUNK of len [{}]".format(i, len(newChunk)))
+                    #print("{}] NEW CHUNK of len [{}]".format(i, len(newChunk)))
                     chunkClass = self.embedSystem[i+1].computeClass(newChunk)   
                     self.memory.addToMemory(i+1, chunkClass)
 

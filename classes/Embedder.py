@@ -41,8 +41,8 @@ class Embedder():
         inputs = Input(shape=(None, 1), batch_shape=(1, None, 1), name='input')
         mask = Masking(mask_value=special_c, name='mask')(inputs)
         if orthogonal:
-            rnn_layer_1, state_c1 = GRU(kernel_regularizer=self.reg, units=unit1, return_sequences=True, name='rnn_layer_1', return_state=True, recurrent_initializer="orthogonal", stateful=True)(mask)
-            rnn_layer_2, state_c2 = GRU(kernel_regularizer=self.reg, units=unit2, return_sequences=True, name='rnn_layer_2', return_state=True, recurrent_initializer="orthogonal", stateful=True)(rnn_layer_1)
+            rnn_layer_1, state_c1 = GRU(kernel_regularizer=self.reg, recurrent_regularizer=self.reg, units=unit1, return_sequences=True, name='rnn_layer_1', return_state=True, recurrent_initializer="orthogonal", stateful=True)(mask)
+            rnn_layer_2, state_c2 = GRU(kernel_regularizer=self.reg, recurrent_regularizer=self.reg, units=unit2, return_sequences=True, name='rnn_layer_2', return_state=True, recurrent_initializer="orthogonal", stateful=True)(rnn_layer_1)
         else:
             rnn_layer_1, state_c1 = SimpleRNN(units=unit1, return_sequences=True, name='rnn_layer_1', return_state=True, recurrent_initializer="orthogonal", stateful=True)(mask)
             rnn_layer_2, state_c2 = SimpleRNN(units=unit2, return_sequences=True, name='rnn_layer_2', return_state=True, recurrent_initializer="orthogonal", stateful=True)(rnn_layer_1)

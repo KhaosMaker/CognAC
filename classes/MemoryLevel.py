@@ -41,7 +41,8 @@ class MemoryLevel:
         fom = 1st order model
         """
         if len(self.h) > 2:
-            return self.h[len(self.h)-1] > self.h[len(self.h)-2]
+            #print(self.level, ") ", self.h[-1], "vs ", self.h[-2])
+            return self.h[-1] > self.h[-2]
         else:
             return False
 
@@ -56,9 +57,9 @@ class MemoryLevel:
         if index is None:
             index = lowerLevel.memoryLength - 2
         self.chunks.append(index)
-        
-        e = self.chunks[len(self.chunks)-1]+1
-        s = max(self.chunks[len(self.chunks)-2]+1, e - self.chunkMaxLength)
+    
+        e = self.chunks[-1]+1
+        s = self.chunks[-2]+1#max(self.chunks[-2]+1, e - self.chunkMaxLength)
         #print("CHUNKLEN: {}".format(self.chunks[len(self.chunks)-1]+1-self.chunks[len(self.chunks)-2]+1))
         
         newChunk = lowerLevel.getChunk(s, e)
