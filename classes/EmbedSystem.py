@@ -2,6 +2,7 @@ from classes.Embedder import Embedder
 from classes.VectorDict import VectorDict
 
 import numpy as np
+from numpy import mean, std
 
 from time import time
 
@@ -110,15 +111,6 @@ class EmbedSystem():
 
     def getActualId(self):
         return self.vd.actualId
-
-    def deleteClassElement(self, new_c, old_c, chunk):
-        """
-        c : - class of the chunk
-        chunk :- 
-
-        delete chunk from old_c and update the new_c one in ClassList
-        """
-        self.vd.deleteClassElement(new_c, old_c, chunk)
     
     def substituteCount(self, new_c, old_c):
         self.vd.classCount[new_c] = self.vd.classCount[old_c]
@@ -154,103 +146,7 @@ class EmbedSystem():
         print("MEAN DIST: ", meanDist)
         print("____________________________")
 
-    def strClassInfo(self):
-        print("  --  LEVEL ", self.level, "  --")
-        result = ""
-        result += "\#| CLASS INFO LEVEL {} |#/\n".format(self.level)
-        # COUNTS
-        if len(self.vd.classCount) == 0:
-            return ""
-        classCount = self.vd.classCount
-        result += "Total Classes: {}\n".format(len(classCount))
-        maxCount = max(classCount)
-        maxClass = classCount.index(maxCount)
-        maxList = self.vd.classList[maxClass]
-        minCount = min(classCount)
-        minClass = classCount.index(minCount)
-        minList = self.vd.classList[minClass]
-        meanCount = sum(classCount)/len(classCount)
-        std = np.std(classCount)
-        result += "#== COUNTS ==#\n"
-        result += "MAX COUNT: {}\n".format(maxCount)
-        #print("--> For class {} : {}".format(maxClass, maxList))
-        result += "MIN COUNT: {}\n".format(minCount)
-        #print("--> For class {} : {}".format(minClass, minList))
-        result += "MEAN COUNT: {}\n".format(meanCount)
-        result += "STD: {}\n".format(std)
-
-        #DISTANCES
-        result += "#== DISTANCES ==#\n"
-
-        #______________________________________
-        c1 = 0 # single class counter
-        c2 = 0 # level chunks counter
-        s1 = 0 # single class distance accumulator
-        s2 = 0 # level distance accumulator
-        t = [] # level distance array (fro std)
-        for cl in self.vd.classList:
-            c1 = 0
-            s1 = 0            
-            for chunks in self.vd.classList[cl]:
-                element = np.frombuffer(chunks, dtype='int32')
-                cnt = self.vd.classList[cl][chunks]
-                element_dist = np.linalg.norm(self.vd.classEmb[cl] - self.emb.get_embedding(element))*cnt
-                s1 += element_dist
-                t.append(element_dist)
-                c1 += cnt
-            c2 += c1
-            s2 += s1
-            if len(self.vd.classList[cl].keys()) > 1:
-                result += "CLASS {} with {}".format(cl, len(self.vd.classList[cl].keys()))
-                #print("CLASS {} with {}".format(cl, len(self.vd.classList[cl].keys())))
-                result += "\t| mean dist --> {}\n".format(s1/c1)
-        meanDist = s2/c2
-        stdDist = np.std(t)
-        #______________________________________
-        result += "MEAN DIST: {} +/- {}\n".format(meanDist, stdDist)
-        #result += "STD DIST: {}\n".format(stdDist)
-        result += "__________________________\n"
-        return result
-
-
-    def strClassInfo_small(self):
-        result = ""
-        result += "{})\n".format(self.level)
-        # COUNTS
-        if len(self.vd.classCount) == 0:
-            return ""
-        classCount = self.vd.classCount
-        result += "Total Classes: {}\n".format(len(classCount))
-        maxCount = max(classCount)
-        maxClass = classCount.index(maxCount)        
-        meanCount = sum(classCount)/len(classCount)
-        std = np.std(classCount)
-        result += "MEAN COUNT: {} | {}\n".format(meanCount, std)
-
-        #DISTANCES
-        #______________________________________
-        c1 = 0 # single class counter
-        c2 = 0 # level chunks counter
-        s1 = 0 # single class distance accumulator
-        s2 = 0 # level distance accumulator
-        t = [] # level distance array (fro std)
-        for cl in self.vd.classList:
-            c1 = 0
-            s1 = 0            
-            for chunks in self.vd.classList[cl]:
-                element = np.frombuffer(chunks, dtype='int32')
-                cnt = self.vd.classList[cl][chunks]
-                element_dist = np.linalg.norm(self.vd.classEmb[cl] - self.emb.get_embedding(element))*cnt
-                s1 += element_dist
-                t.append(element_dist)
-                c1 += cnt
-            c2 += c1
-            s2 += s1
-        meanDist = s2/c2
-        stdDist = np.std(t)
-        result += "MEAN DIST: {} +/- {}\n\n".format(meanDist, stdDist)
-
-        return result
+    
     
     def csvClassInfo(self):
         res = []
@@ -258,35 +154,30 @@ class EmbedSystem():
         try:
             classCount = self.vd.classCount
             maxCount = max(classCount)
-            maxClass = classCount.index(maxCount)        
-            meanCount = sum(classCount)/len(classCount)
         except:
             return res
-        std = np.std(classCount)
+        meanClassCount = mean(classCount)
+        stdClassCount = std(classCount)
         # COUNTS
-        res.append(meanCount)
-        res.append(std)
+        res.append(maxCount)
+        res.append(meanClassCount)
+        res.append(stdClassCount)
+
         #DISTANCES
         #______________________________________
-        c1 = 0 # single class counter
-        c2 = 0 # level chunks counter
-        s1 = 0 # single class distance accumulator
-        s2 = 0 # level distance accumulator
-        t = [] # level distance array (fro std)
-        for cl in self.vd.classList:
-            c1 = 0
-            s1 = 0            
+       
+        internal_distance = [] # level distance array (for std)
+        for cl in self.vd.classList:          
             for chunks in self.vd.classList[cl]:
                 element = np.frombuffer(chunks, dtype='int32')
                 cnt = self.vd.classList[cl][chunks]
-                element_dist = np.linalg.norm(self.vd.classEmb[cl] - self.emb.get_embedding(element))*cnt
-                s1 += element_dist
-                t.append(element_dist)
-                c1 += cnt
-            c2 += c1
-            s2 += s1
-        meanDist = s2/c2
-        stdDist = np.std(t)
+                base = self.vd.classEmb[cl] if cl in self.vd.classEmb else self.vd.classEmbDeposit[cl]
+                element_dist = np.linalg.norm(base - self.emb.get_embedding(element))*cnt
+                for _ in range(cnt):
+                    internal_distance.append(element_dist)
+        
+        meanDist = mean(internal_distance)
+        stdDist = std(internal_distance)
         res.append(meanDist)
         res.append(stdDist)
         return res

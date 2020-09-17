@@ -33,6 +33,9 @@ class VectorDict():
         # Cunk already fitted in the embedder
         self.alreadyFitted = 0
         self.level = level
+
+        # save the class embeddings
+        self.classEmbDeposit = {}
     
     def computeClass(self, emb, seq, push=True, dataLevel=False):
         """
@@ -212,11 +215,6 @@ class VectorDict():
             return self.vectToClass[key]
         return None
 
-
-    def deleteClassElement(self, new_c, old_c, chunk):
-        strseq = chunk.tobytes()#np.array_str(chunk)
-        self.classList[new_c][strseq] = self.classList[old_c][strseq]
-        #del self.classList[old_c][strseq]
     
     # SAVE
     def getSave(self):
@@ -277,13 +275,9 @@ class VectorDict():
                 return res
             if self.classCount[c] == 1:
                 self.classCount[c] = 0
-                #for v in self.classList[c]:
-                #    del self.vectToClass[v]
-                #del self.classList[c]
                 if c in self.classEmb:
+                    self.classEmbDeposit[c] = self.classEmb[c]
                     del self.classEmb[c]
-                    #emb = self.classEmb[c].tobytes()
-                    #del self.reverseEmb[emb]
                 res.append(c)
         return res
     

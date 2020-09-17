@@ -23,7 +23,7 @@ random.shuffle(songname)
 model_name = "model_PROVA"
 
 memoryLevels = 6
-dist = [0, 0.00015]#
+dist = [0, 0.0015]#
 unit1 = 16
 unit2 = 16
 epochs = 200
@@ -42,7 +42,7 @@ statisticalModel=FOM3, orthogonal=orthogonal, lamb=lamb, cleanClasses=cleanClass
 
 
 # Max elements for each song in input (only for testing)
-maxItem = 100000
+maxItem = 4000
 for i in range(1):
 	random.shuffle(songname)
 	for idx in range(len(songname)):

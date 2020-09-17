@@ -19,16 +19,16 @@ lamb =          [0,     0,      0,      0.1,    0.1,    0.01,    0.01,   0.001, 
 ntry = 5
 
 memoryLevels = 6
-dist = [25000, 0.0025]
+dist = [0, 0.0000000000000025]
 unit1 = 16
 unit2 = 16
-epochs = 100
+epochs = 200
 batch = 10
 step = 1
 
 zeroEmbedderPretrained = True
 timeStampSize = 1 # ~1/64s
-cleanClasses = 10000
+cleanClasses = 1500
 
 
 
@@ -50,6 +50,7 @@ for t in range(ntry):
         model = Model(memoryLevels = memoryLevels, dist=dist, unit1=unit1, unit2=unit2, epochs=epochs, batch=batch, 
             statisticalModel=FOM3, orthogonal=orth_model[idx], lamb=lamb[idx], cleanClasses=cleanClasses, 
             trainEmbedder=train_model[idx], doMean=mean_model[idx])
+
         model.loadFirstLayer("music_level_0")
         i += 1
         print(" ### {}/{} ###".format(i, tot))

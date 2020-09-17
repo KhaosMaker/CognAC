@@ -111,12 +111,12 @@ class Model:
                     #self.upwardModel[l] = self.statisticalModel(l, kind='u')
                 self.fitModelLevels()
                 return
-            """
+            
             if idx % 2000 == 0:
                 for i in range(self.levels):
                     v = self.embedSystem[i].vd.meanChunkLen()
                     print("EmbedSystem {}: [{}] [{} +/- {}]".format(i, len(self.embedSystem[i].vd.classEmb), v[0], v[1]))
-            """
+            
             for i in range(self.levels-1):
                 # IF the memory has to be chunked after the new insterion
                 condition = self.memory.hasToChunk(i, self.forwardModel, self.embedSystem, 
@@ -183,7 +183,7 @@ class Model:
             writer = csv.writer(f)
             if flStr is not None:
                 writer.writerow([flStr])
-            writer.writerow(['level', 'Class dim', 'Var','Mean Dist', 'Var'])
+            writer.writerow(['level', 'Class dim', 'Var', 'Max Dim','Mean Dist', 'Var'])
             for element in res:
                 writer.writerow(element)
 
