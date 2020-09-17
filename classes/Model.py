@@ -63,21 +63,6 @@ class Model:
         self.cleanClasses = cleanClasses
 
    
-    def fit(self, reset=0, saveSteps=0, savename='model.json'):
-        """
-        Get the input
-        pass to the embedSystem
-        Get the class
-        push the class in memory
-        update FOM
-        """
-        # If we do not need to update the RNN we can free the memory
-        if self.totalChunkNumber() > self.trainEmbedder:
-            self.memory.resetMemory()
-        self.fitDataLevel()
-        self.fitModelLevels()      
-
-
     def fitDataLevel(self, data):
         """
         fit the level 0
@@ -122,13 +107,16 @@ class Model:
                     self.embedSystem[l].vd.reset()
                     self.memory.resetMemoryLevel(l)
                     self.forwardModel[l] = self.statisticalModel(l, kind='f')
-                    self.downwardModel[l] = self.statisticalModel(l, kind='d')
-                    self.upwardModel[l] = self.statisticalModel(l, kind='u')
+                    #self.downwardModel[l] = self.statisticalModel(l, kind='d')
+                    #self.upwardModel[l] = self.statisticalModel(l, kind='u')
                 self.fitModelLevels()
                 return
-                print("Memory consolidation end")
-                print()
-
+            """
+            if idx % 2000 == 0:
+                for i in range(self.levels):
+                    v = self.embedSystem[i].vd.meanChunkLen()
+                    print("EmbedSystem {}: [{}] [{} +/- {}]".format(i, len(self.embedSystem[i].vd.classEmb), v[0], v[1]))
+            """
             for i in range(self.levels-1):
                 # IF the memory has to be chunked after the new insterion
                 condition = self.memory.hasToChunk(i, self.forwardModel, self.embedSystem, 
@@ -137,8 +125,9 @@ class Model:
                     # Reset state of the embedder
                     self.embedSystem[i].resetPartialState()
                     # create the new chunk and return it as <element>, not ID
-                    newChunk = self.memory.chunk(i+1, actualIndex-1)  
-                    #print("{}] NEW CHUNK of len [{}]".format(i, len(newChunk)))
+                    newChunk = self.memory.chunk(i+1, actualIndex-1) 
+                
+                    #print("{}) NEW CHUNK [{}]".format(i, len(newChunk))) 
                     chunkClass = self.embedSystem[i+1].computeClass(newChunk)   
                     self.memory.addToMemory(i+1, chunkClass)
 
@@ -165,11 +154,11 @@ class Model:
             self.memory.getLevel(i).printLevel(max, start)
         print()
 
-    def printEmbeddingInfo(self):
+    def embeddingInfo(self, filename="info.txt"):
         res = ""
         for i in range(self.levels):
             res += self.embedSystem[i].strClassInfo()
-        with open("embedInfo.txt", "w") as f:
+        with open(filename, "w") as f:
             f.write(res)
     
     def embedInfoToFile(self, s="", filename="info.txt"):
@@ -293,6 +282,17 @@ class Model:
         generation = generation.astype(np.int16)
         print("GENERATION: ")
         siow.write(filename, samplerate, generation)
+
+    def generateFreewheel_text(self, filename, start, n):
+        generation = self.freeWheel(start=start, n=n)
+        print(generation)
+        generation = list(map(chr, generation))
+        print(generation)
+        input()
+        print("GENERATION: ")
+        with open(filename, "w") as f:
+            f.write(' '.join(generation))
+
 
     def startGenerate(self):
         """
@@ -617,27 +617,32 @@ class Model:
         return result
 
     def freeWheel(self, start=0, n=100):
-        memory = Memory(self.levels)
+        memory = self.memory#Memory(self.levels)
+        _s = len(self.memory.getLevel(0).memory)
         memory.addToMemory(0, start)
         token = start        
-        for idx in tqdm(range(n)):
+        for _idx in tqdm(range(n)):
+            idx = _idx + _s
+            #print([chr(self.translateClass(token, 0)[0]) for token in memory.getLevel(0).memory[_s:]])
             possibleTokens = self.forwardModel[0].getNext(token)
             if len(possibleTokens) == 0:
                 possibleTokens.append(self.forwardModel[0].getRandomToken())
-            
             prob = []
             for data in possibleTokens:
-                cleanlevels = self.addToHierarchicalMemory(memory, data, idx, permanent=False)                
-                prob.append(memory.computeProbability(0, self.forwardModel, idx-1, data, self.embedSystem))
-                for l in range(cleanlevels):
-                    memory.getLevel(l).deleteLast()
+                _mem = copy.deepcopy(memory)
+                cleanlevels = self.addToHierarchicalMemory(_mem, data, idx, permanent=False)             
+                prob.append(_mem.computeProbability(0, self.forwardModel, idx-1, data, self.embedSystem))
+                #print("{} - {}".format(chr(self.translateClass(data, 0)[0]), floor(prob[-1]*10000)/10000))
 
+            prob = [p for p in prob]
             token = random.choices(possibleTokens, weights=prob)[0]
             self.addToHierarchicalMemory(memory, token, idx) 
 
         result = []
-        for token in memory.getLevel(0).memory:
-            result = result + self.translateClass(token, 0)
+        print("TRANSALTING...")
+        for token in tqdm(memory.getLevel(0).memory[_s:]):
+            result.append(self.translateClass(token, 0)[0])
+            #result = result + self.translateClass(token, 0)
         return result
 
     def addToHierarchicalMemory(self, memory, data, actualIndex, permanent=True):
@@ -651,26 +656,30 @@ class Model:
             condition = memory.hasToChunk(i, self.forwardModel, self.embedSystem, 
             actualIndex-1, data, influence=True)
             if condition:
-                if permanent:
-                    print("CHUNK at ", actualIndex, "[level ", i, "]")
                 # Reset state of the embedder
                 self.embedSystem[i].resetPartialState()
                 # create the new chunk and return it as <element>, not ID
-                newChunk = memory.chunk(i+1, actualIndex-1)  
+                newChunk = memory.chunk(i+1, actualIndex)  
                 if permanent:
+                    print("CHUNKING LEVEL ", i, " [", len(newChunk), "]")
+                    if i == 0:
+                        print([self.printTranslateChunk(newChunk)])
                     chunkClass = self.embedSystem[i+1].computeClass(newChunk, push=False)
                 else:
                     chunkClass = self.embedSystem[i+1].getClass(newChunk)
                     if chunkClass is None:
                         chunkClass = self.embedSystem[i+1].getNewClassId()
-                
                 memory.addToMemory(i+1, chunkClass)
                 
-                actualIndex = memory.getLevel(i+1).memoryLength-1
+                actualIndex = len(memory.getLevel(i+1).memory)
                 cleanlevels = i+1
 
             else:
                 break
         return cleanlevels
+
+    def printTranslateChunk(self, seq):
+        return [chr(self.translateClass(token, 0)[0]) for token in seq]
+
 
 

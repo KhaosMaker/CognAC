@@ -1,6 +1,7 @@
 from classes.MemoryLevel import MemoryLevel
 from classes.CONSTANTS import zeroProbability
 import math
+import functools
 import numpy as np
 from bisect import bisect_left
 from time import time
@@ -44,12 +45,6 @@ class Memory():
         Chunk correctly the memory at <level>-1, adding the new chunk at <level>.
         """
         return self.memory[level].chunk(self.memory[level-1], index)
-    
-    def chunkToString(self, chunk, level):
-        """
-        Return the chunk as a string "<element>,<element>,..."
-        """
-        return self.memory[level].chunkToString(chunk)
 
     def computeInformationContent(self, level, fom, previousIndex, token, es, influence=False):
         """
@@ -157,6 +152,72 @@ class Memory():
         else:
             # if the upper layer memory is empty or have only 1 item
             return 1
+    
+    def computeDownwardProbability_3(self, level, fom, previousIndex, token, embedSystem, influence=False):
+        """
+        influence :- if true, the upper layer always influence the lowers. Otherwise, if a class is not found, 
+        the probability would return 1.
+        """
+        # if this is the last level there is no downward prob
+        if level+1 >= self.levels:
+            return 1
+
+        if self.memory[level+1].memoryLength > 0:
+            isFringe = self.memory[level].memoryLength-1 <= previousIndex+1
+            closureIndex, previousChunk = self.memory[level+1].getPreviousChunkClosure(previousIndex+1, isFringe)
+
+            # Compose the buffer
+            buffer = self.memory[level].getChunk(closureIndex+1, previousIndex+1)
+
+            ###################################################
+            # 3c. Get all classes of chunks that start with it
+            
+            # Get all unique chunks
+            allchunks = embedSystem[level].vd.chunkList
+
+            # Get the len of the partial chunk with and without the last token.
+            ln1 = len(buffer)
+
+            # Get the byte repr. of the partial chunk with and without the last token.
+            tb1 = buffer
+
+            # Create a list with all the chunks that match in the form of keys
+            # and count.
+            y = []
+            simCounter = 0
+            
+            # For each existent chunk
+            for idx in range(len(allchunks)):
+                # if it is of the right length
+                if allchunks[idx].shape[0] >= ln1+1:
+                    c = list(allchunks[idx])
+                    # if it is equal to the buffer increas the simCounter
+
+                    if self.listcompare(c[:ln1], buffer):
+                        simCounter+=1
+                        # if it is equal to all the seq, add it to the res
+                        if c[ln1] == token:
+                            y.append(allchunks[idx])
+
+            pcClasses = [embedSystem[level].getClass(seq) for seq in y]
+            P = max(len(y)/max(simCounter,1), zeroProbability)
+
+            
+            # 4c. Fw Pr of pcClass
+            if len(list(pcClasses)) == 0:
+                F = P
+            else:
+                F = 0
+                for pcClass in pcClasses:
+                    F += fom[level+1].getProbability(self.memory[level+1].getItem(previousChunk), pcClass) * self.computeDownwardProbability_3(level+1, fom, previousChunk, pcClass, embedSystem)  
+            ###################################################
+            return F * P     
+        else:
+            # if the upper layer memory is empty or have only 1 item
+            return 1
+
+    def listcompare(self, l1, l2):
+        return functools.reduce(lambda i, j : i and j, map(lambda m, k: m == k, l1, l2), True)
 
 
     def computeDownwardProbability(self, level, fom, previousIndex, token, embedSystem):

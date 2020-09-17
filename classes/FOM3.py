@@ -66,12 +66,17 @@ class FOM3():
         
         value = self.getValue(prev, next) 
         tot = self.getTotal(prev) + 1
-        if value == 0:
-            if next not in self.zeroOrder:
-                return 1/tot * 1 / sum(self.zeroOrder.values())
-            return 1 / tot * self.zeroOrder[next] / sum(self.zeroOrder.values())
-        else:
-            return value / tot
+
+        # Form Pierce:
+        # p(x | y) = p_1(x | y) + gamma(x)*p_0(x)
+        return 1/tot * self.getZeroOrderProb(next) + value/tot
+
+
+    def getZeroOrderProb(self, symbol):
+        if symbol not in self.zeroOrder:
+            return 1 / sum(self.zeroOrder.values())
+        return self.zeroOrder[symbol] / sum(self.zeroOrder.values())
+
 
     
     def getDistribution(self, token):

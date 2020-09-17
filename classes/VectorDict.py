@@ -1,6 +1,7 @@
 import numpy as np
 import pickle
 from numpy.linalg import norm
+from statistics import mean, stdev
 
 from time import time
 
@@ -73,6 +74,9 @@ class VectorDict():
         
         if temp2[idx] <= self.dist:
             #print(self.level, ") fromGetClass: ", len(self.reverseEmb))
+            # DA CORREGGERE :- perché dovrebbe accadere?
+            if temp[idx].tobytes() not in self.reverseEmb:
+                return None
             c = self.reverseEmb[temp[idx].tobytes()]
             self.insertSeq(emb, seq, c, push, dataLevel)
             return c
@@ -91,9 +95,12 @@ class VectorDict():
                 c = self.reverseEmb[temp[idx].tobytes()]
                 return c
             except:
+                return None
                 for k in self.classEmb:
                     if temp[idx].tobytes() == self.classEmb[k].tobytes():
-                        print("ERROR: key is ", k, "with: ", self.actualId)
+                        print("<VD>ERROR: ", k)
+                        return k
+                        
         else:
             return None
 
@@ -138,8 +145,9 @@ class VectorDict():
         if self.doMean:
             temp = self.classEmb[c].tobytes()
             self.classEmb[c] = (self.classEmb[c]*self.classCount[c]+emb)/(self.classCount[c]+1)
-            self.reverseEmb[self.classEmb[c]] = self.reverseEmb[temp]
+            self.reverseEmb[self.classEmb[c].tobytes()] = self.reverseEmb[temp]
             del self.reverseEmb[temp]
+            print(self.reverseEmb[self.classEmb[c].tobytes()])
 
         self.classCount[c] += 1
         if push:
@@ -220,7 +228,7 @@ class VectorDict():
         res["dist"] = self.dist
         return res
     
-    def load(self, save):
+    def load(self, save, type='int32'):
         self.classEmb = save['classEmb']
         self.classList = save['classList']
         self.actualId = save['actualId']
@@ -265,6 +273,8 @@ class VectorDict():
         """
         res = []
         for c in range(len(self.classCount)):
+            if len(self.classEmb) < 500:
+                return res
             if self.classCount[c] == 1:
                 self.classCount[c] = 0
                 #for v in self.classList[c]:
@@ -276,3 +286,12 @@ class VectorDict():
                     #del self.reverseEmb[emb]
                 res.append(c)
         return res
+    
+    def meanChunkLen(self):
+        if len(self.uniqueChunkList) < 3:
+            return 0,0
+        v = [len(chunk) for chunk in self.uniqueChunkList]
+        m = mean(v)
+        s = stdev(v)
+        return m, s
+

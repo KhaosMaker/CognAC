@@ -1,4 +1,5 @@
-from math import floor
+from math import floor, sqrt
+from statistics import stdev, mean
 import numpy as np
 
 class MemoryLevel:
@@ -17,6 +18,11 @@ class MemoryLevel:
         # For each element, it contain the index of the element at level-1 that _close_ the chunk
         # a chunk at index i is the union of the elements at level-1 with index from chunks[i-1] to chunks[i]
         self.chunks = [-1]
+
+        # Usend in the boundary function
+        self.meanh_w = 0
+        self.window = 100
+        self.d = 2
     
     def addToMemory(self, item):
         self.memory.append(item)
@@ -27,24 +33,52 @@ class MemoryLevel:
     def addh(self, value):
         self.h.append(value)
 
-    def newSymbol(self):
-        """
-        Create new symbol (ID) for a new chunk
-        """
-        #TODO
-        return "ID_"+str(self.level)+"_"+str(self.memoryLength)
-
-
+    
     def hasToChunk(self):
         """
         CHUNKING METHOD HERE
         fom = 1st order model
+        """
         """
         if len(self.h) > 2:
             #print(self.level, ") ", self.h[-1], "vs ", self.h[-2])
             return self.h[-1] > self.h[-2]
         else:
             return False
+        """
+        if len(self.h) > self.window and self.h[-1] > self.h[-2] :
+            std = self.stdInformationContent()       
+            if std == 0:
+                return False     
+            self.meanh_w = self.meanInformationContent()  
+            """
+            if self.level >= 0 and self.memory[len(self.h)-2] > 0:
+                print("{} -> {}".format(self.memory[len(self.h)-2], self.memory[len(self.h)-1]))
+                print("{}) {} | {} | {}".format(self.level, self.meanh_w, std, (self.h[-1] - self.meanh_w)/std)) 
+                print("{} > {}  || {}".format(self.h[-1], self.h[-2], self.h[-1] > self.h[-2] and (self.d < (self.h[-1] - self.meanh_w)/std)))
+                input()
+            """
+            
+            return (self.d < (self.h[-1] - self.meanh_w)/std)
+        else:
+            return False
+
+
+    def meanInformationContent(self):
+        w = min(self.window, len(self.h))
+        """
+        tot = sum(self.h[-w:])
+        return tot/w
+        """
+        return mean(self.h[-w:-1])
+    
+    def stdInformationContent(self):
+        w = min(self.window, len(self.h))
+        """
+        num = sum([(self.h[i] - self.meanh_w) for i in range(len(self.h))])
+        return num / w
+        """
+        return stdev(self.h[-w:-1])
 
     def chunk(self, lowerLevel, index=None):
         """
@@ -59,14 +93,13 @@ class MemoryLevel:
         self.chunks.append(index)
     
         e = self.chunks[-1]+1
-        s = self.chunks[-2]+1#max(self.chunks[-2]+1, e - self.chunkMaxLength)
-        #print("CHUNKLEN: {}".format(self.chunks[len(self.chunks)-1]+1-self.chunks[len(self.chunks)-2]+1))
-        
+        if len(self.chunks) > 2:
+            s = self.chunks[-2]+1
+        else:
+            s = e
+                        
         newChunk = lowerLevel.getChunk(s, e)
 
-        #print("MemoryLevel.py -- {}# memory({},{}) => {}".format(self.level, s,e-1, newChunk))
-
-        # Return the chunk (as element of the alphabet, not ID)
         return newChunk
     
     def getChunkLimits(self, index):
@@ -140,6 +173,7 @@ class MemoryLevel:
         Return the token at the <index> in memory.
         NB: return the element as a string, not the ID.
         """
+        #print(len(self.memory), "vs", index, " vs ", self.memoryLength)
         return self.memory[index]
 
     def geth(self):
@@ -168,7 +202,7 @@ class MemoryLevel:
         """
         # NB: the last item is at len-1, while the index is -2 for the
         # shadow chunk at position 0.
-        return self.chunks[len(self.chunks)-1], len(self.chunks)-2
+        return self.chunks[-1], len(self.chunks)-2
     
     def getPreviousChunkClosure(self, index, fringe):
         """

@@ -1,15 +1,15 @@
 from classes.Model import Model
 from math import floor
 
-model_name = "model_PROVA"
-songname = model_name+"_loadtest.wav"
+model_name = "model_char_short_5"
+songname = "text_out.txt"
 
 model = Model()
 model.load(model_name)
 
 
 print("GENERATING: ", songname)
-model.generateFreewheel(songname, 8999, 2000, floor(22050/2))
+model.generateFreewheel_text(songname, 10, 1000)
 
 print()
 print("SAVING embed data")

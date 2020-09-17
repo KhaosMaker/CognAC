@@ -20,12 +20,12 @@ for file in glob.glob("*.wav"):
     songname.append(file)
 #songname = ["song_pkmn_1.wav"]
 random.shuffle(songname)
-model_name = "model2020"
+model_name = "model_PROVA"
 
 memoryLevels = 6
-dist = [26000, 0.00015]#
+dist = [0, 0.00015]#
 unit1 = 16
-unit2 = 8
+unit2 = 16
 epochs = 200
 batch = 10
 step = 1
@@ -33,16 +33,16 @@ doMean = True
 orthogonal = True
 lamb = 0.001
 zeroEmbedderPretrained = True
-trainEmbedder = 1000
+trainEmbedder = 10000
 cleanClasses= 10000
-timeStampSize = 150 # ~1/64s
+timeStampSize = 1 # ~1/64s
 
 model = Model(memoryLevels = memoryLevels, dist=dist, unit1=unit1, unit2=unit2, epochs=epochs, batch=batch, 
 statisticalModel=FOM3, orthogonal=orthogonal, lamb=lamb, cleanClasses=cleanClasses, trainEmbedder=trainEmbedder)
 
 
 # Max elements for each song in input (only for testing)
-maxItem = 0
+maxItem = 100000
 for i in range(1):
 	random.shuffle(songname)
 	for idx in range(len(songname)):
@@ -70,11 +70,12 @@ for i in range(1):
 
 		print("  --  STARTING MODEL  --")
 		
-		model.fitDataLevel(t[random.randint(0,40):])
+		model.fitDataLevel(t)#[random.randint(0,40):])
 		#model.clean()
 
 os.chdir(direct)
-model.saveFirstLayer("firstLayer_backup")
+model.saveFirstLayer("music_level_0")
+exit()
 #input()
 
 

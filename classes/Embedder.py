@@ -53,9 +53,9 @@ class Embedder():
         self.model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
         self.emb_size = unit1+unit2
 
-        self.earlyStopping = EarlyStopping(monitor='accuracy', patience=10, verbose=0, mode='min')
+        self.earlyStopping = EarlyStopping(monitor='accuracy', patience=50, verbose=0, mode='min')
         #self.mcp_save = ModelCheckpoint('.mdl_wts.hdf5', save_best_only=True, monitor='val_loss', mode='min')
-        self.reduce_lr_loss = ReduceLROnPlateau(monitor='accuracy', factor=0.1, patience=7, verbose=1, epsilon=1e-4, mode='min')
+        self.reduce_lr_loss = ReduceLROnPlateau(monitor='accuracy', factor=0.1, patience=20, verbose=1, epsilon=1e-4, mode='min')
 
         self.partialState = None
 

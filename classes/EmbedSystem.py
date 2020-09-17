@@ -8,9 +8,7 @@ from time import time
 class EmbedSystem():
     def __init__(self, level, dist=10, unit1=1, unit2=1, special_c= -45000, embedder=None, doMean=False, orthogonal=False, lamb=0.01):
         self.vd = VectorDict(dist, level=level, doMean=doMean)
-        if level == 0:
-            self.emb = None
-        elif embedder is not None:
+        if embedder is not None:
             self.emb = embedder
         else:
             self.emb = Embedder(level, unit1, unit2, special_c, orthogonal=orthogonal, lamb=lamb)
