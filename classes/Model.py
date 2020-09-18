@@ -118,19 +118,19 @@ class Model:
                     print("EmbedSystem {}: [{}] [{} +/- {}]".format(i, len(self.embedSystem[i].vd.classEmb), v[0], v[1]))
             
             for i in range(self.levels-1):
-            # IF the memory has to be chunked after the new insterion
-            condition = memory.hasToChunk(i, self.forwardModel, self.embedSystem, 
-            actualIndex-1, data, influence=True)
-            if condition:
-                # Reset state of the embedder
-                self.embedSystem[i].resetPartialState()
-                newChunk = memory.chunk(i+1, actualIndex)                 
-                chunkClass = self.embedSystem[i+1].computeClass(newChunk, push=False)
-                memory.addToMemory(i+1, chunkClass)                
-                actualIndex = len(memory.getLevel(i+1).memory)
+                # IF the memory has to be chunked after the new insterion
+                condition = self.memory.hasToChunk(i, self.forwardModel, self.embedSystem, 
+                actualIndex-1, self.memory.getLevel(i).getItem(actualIndex-1))
+                if condition:
+                    # Reset state of the embedder
+                    self.embedSystem[i].resetPartialState()
+                    newChunk = self.memory.chunk(i+1, actualIndex)                 
+                    chunkClass = self.embedSystem[i+1].computeClass(newChunk, push=False)
+                    self.memory.addToMemory(i+1, chunkClass)                
+                    actualIndex = len(self.memory.getLevel(i+1).memory)
 
-            else:
-                break
+                else:
+                    break
 
     def printModel(self, max=10, start=0):
         for i in range(self.levels):
@@ -192,7 +192,7 @@ class Model:
     
     def updateEmbedder(self):
         #print("---> {} >= {}".format(self.totalChunkNumber(), self.trainEmbedder))
-        return not self.embedderTrained and self.totalChunkNumber() >= self.trainEmbedder
+        return not self.embedderTrained and self.trainEmbedder > 0 and self.totalChunkNumber() >= self.trainEmbedder
 
     """
     def getBatchEmbedding(self):

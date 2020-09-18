@@ -12,7 +12,7 @@ import os
 
 directory = 'esperimenti/'
 model_name =    ["a",   "b",    "c",    "d",    "e",    "f",    "g",    "h",    "i"]
-train_model =   [0,     0,      5000,   5000,   5000,   5000,   5000,   5000,   5000]
+train_model =   [0,     0,      1500,   1500,   1500,   1500,   1500,   1500,   1500]
 mean_model =    [False, True,   False,  True,   False,  True,   False,  True,   False]
 orth_model =    [False, False,  False,  True,   True,   True,   True,   True,   True]
 lamb =          [0,     0,      0,      0.1,    0.1,    0.01,    0.01,   0.001,  0.001]
