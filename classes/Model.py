@@ -118,34 +118,19 @@ class Model:
                     print("EmbedSystem {}: [{}] [{} +/- {}]".format(i, len(self.embedSystem[i].vd.classEmb), v[0], v[1]))
             
             for i in range(self.levels-1):
-                # IF the memory has to be chunked after the new insterion
-                condition = self.memory.hasToChunk(i, self.forwardModel, self.embedSystem, 
-                actualIndex-1, self.memory.getLevel(i).getItem(actualIndex))
-                if condition:
-                    # Reset state of the embedder
-                    self.embedSystem[i].resetPartialState()
-                    # create the new chunk and return it as <element>, not ID
-                    newChunk = self.memory.chunk(i+1, actualIndex-1) 
-                
-                    #print("{}) NEW CHUNK [{}]".format(i, len(newChunk))) 
-                    chunkClass = self.embedSystem[i+1].computeClass(newChunk)   
-                    self.memory.addToMemory(i+1, chunkClass)
+            # IF the memory has to be chunked after the new insterion
+            condition = memory.hasToChunk(i, self.forwardModel, self.embedSystem, 
+            actualIndex-1, data, influence=True)
+            if condition:
+                # Reset state of the embedder
+                self.embedSystem[i].resetPartialState()
+                newChunk = memory.chunk(i+1, actualIndex)                 
+                chunkClass = self.embedSystem[i+1].computeClass(newChunk, push=False)
+                memory.addToMemory(i+1, chunkClass)                
+                actualIndex = len(memory.getLevel(i+1).memory)
 
-                    # update the forward model at level i+1                        
-                    self.forwardModel[i+1].update(self.memory.beforeItem(i+1), self.memory.actualItem(i+1))                    
-
-                    # Update the upward model with the starting symbol of the chunk and the new chunk
-                    #chunkString = self.memory.chunkToString(newChunk, i+1)
-                    self.upwardModel[i].update(newChunk[0], chunkClass)
-
-                    # Update the downward model with the transition between the chunk and its last symbol
-                    # NB the downward model is the one of the level ABOVE.
-                    self.downwardModel[i+1].update(chunkClass, newChunk[len(newChunk)-1])
-                    
-                    actualIndex = self.memory.getLevel(i+1).memoryLength-1
-
-                else:
-                    break
+            else:
+                break
 
     def printModel(self, max=10, start=0):
         for i in range(self.levels):
@@ -661,9 +646,11 @@ class Model:
                 # create the new chunk and return it as <element>, not ID
                 newChunk = memory.chunk(i+1, actualIndex)  
                 if permanent:
+                    """
                     print("CHUNKING LEVEL ", i, " [", len(newChunk), "]")
                     if i == 0:
                         print([self.printTranslateChunk(newChunk)])
+                    """
                     chunkClass = self.embedSystem[i+1].computeClass(newChunk, push=False)
                 else:
                     chunkClass = self.embedSystem[i+1].getClass(newChunk)

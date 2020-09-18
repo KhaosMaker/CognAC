@@ -4,6 +4,7 @@ from numpy.linalg import norm
 from statistics import mean, stdev
 
 from time import time
+from copy import deepcopy
 
 
 class VectorDict():
@@ -148,9 +149,9 @@ class VectorDict():
         if self.doMean:
             temp = self.classEmb[c].tobytes()
             self.classEmb[c] = (self.classEmb[c]*self.classCount[c]+emb)/(self.classCount[c]+1)
-            self.reverseEmb[self.classEmb[c].tobytes()] = self.reverseEmb[temp]
+            self.reverseEmb[self.classEmb[c].tobytes()] = deepcopy(self.reverseEmb[temp])
             del self.reverseEmb[temp]
-            print(self.reverseEmb[self.classEmb[c].tobytes()])
+            #print(self.reverseEmb[self.classEmb[c].tobytes()])
 
         self.classCount[c] += 1
         if push:
@@ -271,12 +272,9 @@ class VectorDict():
         """
         res = []
         for c in range(len(self.classCount)):
-            if len(self.classEmb) < 500:
-                return res
             if self.classCount[c] == 1:
-                self.classCount[c] = 0
                 if c in self.classEmb:
-                    self.classEmbDeposit[c] = self.classEmb[c]
+                    self.classEmbDeposit[c] = deepcopy(self.classEmb[c])
                     del self.classEmb[c]
                 res.append(c)
         return res
